@@ -1,0 +1,8 @@
+# Your private journal data never goes into git.
+data/entries/*.json
+data/media/*
+!data/entries/.gitkeep
+!data/media/.gitkeep
+
+.DS_Store
+node_modules/

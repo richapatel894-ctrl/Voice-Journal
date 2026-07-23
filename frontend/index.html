@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voice Journal</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>🎙 Voice Journal</h1>
+    <nav class="tabs">
+      <button class="tab active" data-tab="record">Record</button>
+      <button class="tab" data-tab="entries">Entries</button>
+      <button class="tab" data-tab="insights">Insights</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ============ RECORD (the primary screen) ============ -->
+    <section id="tab-record" class="tab-panel active">
+      <div class="record-stage">
+        <button id="recordBtn" class="record-btn" aria-label="Record">
+          <span class="mic-icon">🎙</span>
+        </button>
+        <p id="recordHint" class="hint">Tap to start recording</p>
+        <p id="liveTranscript" class="live-transcript"></p>
+      </div>
+
+      <div class="divider"><span>or write it</span></div>
+
+      <div class="text-compose">
+        <textarea id="textInput" placeholder="Type an entry…"></textarea>
+        <div class="compose-actions">
+          <label class="attach-btn">
+            📎 Attach
+            <input type="file" id="fileInput" multiple hidden />
+          </label>
+          <button id="saveTextBtn" class="primary">Save entry</button>
+        </div>
+        <div id="pendingAttachments" class="pending-attachments"></div>
+      </div>
+    </section>
+
+    <!-- ============ SUGGESTION CARD (appears after save) ============ -->
+    <div id="suggestionCard" class="suggestion-card hidden">
+      <p class="suggestion-title">Saved! Does this look right?</p>
+      <div class="suggestion-row">
+        <label>Theme</label>
+        <select id="themeSelect"></select>
+      </div>
+      <div class="suggestion-row">
+        <label>Emotion</label>
+        <select id="emotionSelect"></select>
+      </div>
+      <div class="suggestion-actions">
+        <button id="confirmBtn" class="primary">Looks right ✓</button>
+      </div>
+    </div>
+
+    <!-- ============ ENTRIES ============ -->
+    <section id="tab-entries" class="tab-panel">
+      <div class="filters">
+        <select id="filterTheme"><option value="">All themes</option></select>
+        <select id="filterEmotion"><option value="">All emotions</option></select>
+      </div>
+      <div id="entriesList" class="entries-list"></div>
+    </section>
+
+    <!-- ============ INSIGHTS (visualization) ============ -->
+    <section id="tab-insights" class="tab-panel">
+      <p class="insights-caption">
+        Your emotions on the <b>mood map</b>. Bigger circle = more entries.
+        Left↔right = unpleasant↔pleasant. Up↔down = high↔low energy.
+        <b>Click a circle</b> to see its entries.
+      </p>
+      <div id="scatter"></div>
+      <div id="scatterEntries" class="entries-list"></div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
