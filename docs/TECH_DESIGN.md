@@ -9,6 +9,143 @@
 
 ---
 
+## Foundations — start here (the absolute basics)
+
+> Written for a non-technical reader. Once these four words — **server, HTTP,
+> localhost, port** — click, most of "how software works" stops being mysterious.
+> We use one running analogy the whole way: **a restaurant.**
+
+### What is a "server"?
+
+The word sounds like a humming machine in a data center. Forget that. Here:
+
+> **A server is just a *program* that waits for requests and sends back responses.**
+
+It waits quietly. Someone asks it for something. It does the work and hands back an
+answer. Then it waits again.
+
+- **Restaurant analogy:** the server is the **kitchen**. It never cooks randomly —
+  it waits for an order ticket, makes exactly what was ordered, sends the dish back.
+- The thing that *makes* requests is the **client**. In our app the client is your
+  **browser** — the customer at the table.
+
+```
+   CLIENT (browser)                          SERVER (our server.js)
+   "the customer"                            "the kitchen"
+        │   "give me all my journal entries"      │
+        │ ──────────────────────────────────────► │  (reads the ticket,
+        │              (a REQUEST)                 │   gathers the entries)
+        │      here are your 5 entries             │
+        │ ◄────────────────────────────────────── │
+        │              (a RESPONSE)                │
+```
+
+**Key insight:** the kitchen never speaks first. *Nothing happens on the server
+until a client asks.* Running `node server.js` doesn't "open" a program in the
+normal sense — it **opens the kitchen and tells it to start waiting for orders.**
+That's why the terminal just sits there afterward: the kitchen is open and
+listening. Close the terminal → the kitchen closes.
+
+### What is HTTP?
+
+The customer and kitchen need an agreed way to communicate — a shared format for
+orders and dishes. That format is **HTTP** (HyperText Transfer Protocol).
+
+> **HTTP is simply the agreed *format* for how a client and server talk.**
+> ("Protocol" = a set of agreed rules for communicating. Saying "Hello?" when you
+> pick up a phone is a protocol too.)
+
+- **Restaurant analogy:** HTTP is the **standard order-ticket format**, so the
+  kitchen always understands a ticket.
+
+An HTTP **request** (the order ticket) has:
+- a **verb** — what to do: `GET` (fetch me something), `POST` (here's something new to save)
+- a **path** — which thing: `/api/entries`
+- optionally a **body** — the details (the text of a new entry)
+
+An HTTP **response** (the dish) has:
+- a **status code** — did it work? `200` = OK, `404` = "couldn't find that", `500` = "kitchen errored"
+- a **body** — the actual answer (your entries, as text)
+
+> You've *seen* these: a **"404 Not Found"** page is literally a server replying
+> with status code 404. Now you know what that number means.
+
+**Why a shared protocol matters:** because HTTP is a standard, *any* client can
+talk to *any* server. A browser, an iPhone app, or a computer across the world can
+all order from the same kitchen. This is exactly why your future **iOS app can
+reuse this same backend** — it just sends HTTP tickets to the same kitchen.
+
+### What does "local" / "localhost" mean?
+
+> **"Local" = running on *your own computer*, not on the internet.**
+
+Right now the kitchen (`server.js`) runs *on your laptop*. It's not on the internet;
+nobody else in the world can reach it. A kitchen inside your own house, cooking only
+for you. That is a **local server**.
+
+- **`localhost`** is a special word meaning **"this exact computer I'm on."** When
+  the browser opens `http://localhost:5050`, it says *"send this ticket to a kitchen
+  on this very same computer."*
+- **Restaurant analogy:** the kitchen is **in your own home**. You walk from the
+  living room to the kitchen — you never step outside. This is why **local-first is
+  the privacy promise**: the food never leaves the building.
+
+### IP addresses and ports (how a ticket finds the right kitchen)
+
+Two pieces: an address, and a room number.
+
+- **IP address = the building's street address.** Every computer on a network has
+  one, like `192.168.1.42`. `localhost` is a nickname for `127.0.0.1`, which always
+  means "myself." `192.168.1.42` would be your laptop's address *on your home WiFi*
+  — the address your phone uses to find it.
+- **Port = the specific room in the building.** One computer can run many servers at
+  once (a web server, a database, …), so you must say *which*. The port is the number
+  after the colon.
+
+```
+   http://localhost:5050/api/entries
+   └┬─┘   └───┬────┘ └┬─┘ └────┬────┘
+    │         │       │        │
+ protocol   which   which   which dish
+ (HTTP)    computer  room   on the menu
+                    (port)  (the path)
+```
+
+That whole string means: *"Using HTTP, go to this computer, knock on door 5050, and
+ask for the entries."* If another program already used room 5050, ours couldn't open
+there — that's the "address already in use" error, now demystified.
+
+### The full picture — one real click in your app
+
+What actually happens when you open the **Entries** tab:
+
+1. You click "Entries." The **browser (client)** needs data.
+2. It writes an **HTTP request**: `GET /api/entries` (verb `GET`, path `/api/entries`).
+3. It sends that to `localhost:5050` — **your computer (localhost)**, door **5050 (port)**.
+4. **`server.js` (the kitchen)**, waiting since you ran `node server.js`, receives it.
+5. The kitchen opens the files in `data/entries/` and gathers them.
+6. It sends back an **HTTP response**: status `200` + your entries as text (JSON).
+7. The browser receives the dish and draws the entry cards.
+
+Every feature — recording, saving, the scatterplot — is a variation of these 7
+steps. **Understand this one trace and you understand the skeleton of essentially
+every app ever made**, from Instagram to your bank.
+
+### The four words, one line each
+
+- **Server** = a program that waits for requests and sends answers (the kitchen).
+- **HTTP** = the agreed format for those requests and answers (the order-ticket standard).
+- **localhost / IP** = *which computer* (`localhost` = this same one; `192.168.x.x` = a machine on your WiFi).
+- **Port** = *which service* on that computer (the room number, e.g. `5050`).
+
+> **LEARN — a *standard* is a promise about the interface, not the implementation.**
+> HTTP guarantees *how* you write a request, not *how* the server fulfills it. That
+> gap — interface vs. implementation — is one of the deepest ideas in software, and
+> it's why we can swap our storage, our transcription, or our whole frontend later
+> without the other parts noticing.
+
+---
+
 ## 0. The mental model: what *is* an app?
 
 Almost every app you've ever used is the same three things talking to each other:
