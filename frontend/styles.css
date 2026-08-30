@@ -14,11 +14,15 @@
 
   /* Pastel emotion colors */
   --happy:    #ffd98a;
+  --excited:  #ffb877;
+  --grateful: #b8e6b0;
   --calm:     #a8e6cf;
   --sad:      #a9c8ff;
   --anxious:  #d6c2ff;
   --angry:    #ffb3b3;
   --confused: #ffc9a4;
+  --disappointed: #e6d5c3;
+  --tired:    #c9cdd6;
 
   --radius: 20px;
   --shadow: 0 8px 30px rgba(255, 141, 161, 0.15);
@@ -139,12 +143,16 @@ main { max-width: 720px; margin: 0 auto; padding: 24px; }
 .mood .emoji { font-size: 1.7rem; line-height: 1; }
 .mood .label { font-size: 0.7rem; font-weight: 600; color: var(--text); }
 .mood.selected { transform: translateY(-3px) scale(1.03); }
-.mood[data-mood="Happy"].selected    { border-color: var(--happy);    background: var(--happy); }
-.mood[data-mood="Calm"].selected     { border-color: var(--calm);     background: var(--calm); }
-.mood[data-mood="Sad"].selected      { border-color: var(--sad);      background: var(--sad); }
-.mood[data-mood="Anxious"].selected  { border-color: var(--anxious);  background: var(--anxious); }
-.mood[data-mood="Angry"].selected    { border-color: var(--angry);    background: var(--angry); }
-.mood[data-mood="Confused"].selected { border-color: var(--confused); background: var(--confused); }
+.mood[data-mood="Happy"].selected        { border-color: var(--happy);        background: var(--happy); }
+.mood[data-mood="Excited"].selected      { border-color: var(--excited);      background: var(--excited); }
+.mood[data-mood="Grateful"].selected     { border-color: var(--grateful);     background: var(--grateful); }
+.mood[data-mood="Calm"].selected         { border-color: var(--calm);         background: var(--calm); }
+.mood[data-mood="Confused"].selected     { border-color: var(--confused);     background: var(--confused); }
+.mood[data-mood="Anxious"].selected      { border-color: var(--anxious);      background: var(--anxious); }
+.mood[data-mood="Angry"].selected        { border-color: var(--angry);        background: var(--angry); }
+.mood[data-mood="Sad"].selected          { border-color: var(--sad);          background: var(--sad); }
+.mood[data-mood="Disappointed"].selected { border-color: var(--disappointed); background: var(--disappointed); }
+.mood[data-mood="Tired"].selected        { border-color: var(--tired);        background: var(--tired); }
 
 /* ================= RECORD BANNER (prominent) ================= */
 .record-banner {
@@ -189,18 +197,23 @@ button.primary {
 }
 button.primary:hover { filter: brightness(1.05); }
 
-/* ---- suggestion card ---- */
-.suggestion-card {
-  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-  background: var(--surface); border: 2px solid var(--pink); border-radius: var(--radius);
-  padding: 18px 22px; width: min(440px, 92vw); box-shadow: 0 20px 60px rgba(255,107,138,0.25); z-index: 20;
-}
-.suggestion-title { margin: 0 0 12px; font-weight: 700; font-size: 0.95rem; }
-/* theme + emotion side by side, compact */
+/* theme + emotion side by side, compact (used in the edit form) */
 .pill-grid { display: flex; gap: 10px; }
 .pill-field { flex: 1; display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; color: var(--muted); font-weight: 600; }
 .pill-field select { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 8px; font-size: 0.9rem; }
-.suggestion-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+
+/* ---- "Saved" toast ---- */
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(16px);
+  background: var(--pink); color: #fff; font-weight: 700; padding: 12px 22px;
+  border-radius: 999px; box-shadow: 0 12px 40px rgba(255,107,138,0.4);
+  opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; z-index: 30;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---- Today feed on home ---- */
+.today-feed { margin-top: 26px; }
+.today-title { margin: 0 0 12px; font-size: 1.05rem; font-weight: 700; color: var(--text); }
 
 /* ---- entries list ---- */
 .filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
@@ -221,9 +234,7 @@ button.primary:hover { filter: brightness(1.05); }
 .badge.emotion[data-emotion="Confused"]     { background: var(--confused); }
 .badge.emotion[data-emotion="Disappointed"] { background: #e6d5c3; }
 .badge.emotion[data-emotion="Neutral"]      { background: var(--surface-2); color: var(--muted); }
-.entry-emotion { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.05; }
-.entry-emotion .emo-emoji { font-size: 1.15rem; }
-.entry-emotion .emo-label { font-size: 0.62rem; color: var(--muted); font-weight: 600; }
+.entry-emotion { font-size: 1.25rem; line-height: 1; }
 .entry-date { color: var(--muted); }
 .entry-actions { margin-left: auto; display: flex; gap: 12px; }
 .icon-btn { background: none; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; }

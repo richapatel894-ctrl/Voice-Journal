@@ -35,30 +35,36 @@ const api = {
 };
 
 const THEMES = ['Toastmasters', 'Work', 'Personal Growth', 'Cooking', 'Traveling', 'Relationships', 'Uncategorized'];
-const EMOTIONS = ['Happy', 'Calm', 'Sad', 'Anxious', 'Angry', 'Confused', 'Disappointed', 'Neutral'];
+// The mood check-in + full emotion list (kept in sync with backend classifier.js).
 const MOODS = [
-  { emotion: 'Happy',    emoji: '😊' },
-  { emotion: 'Calm',     emoji: '😌' },
-  { emotion: 'Sad',      emoji: '😢' },
-  { emotion: 'Anxious',  emoji: '😰' },
-  { emotion: 'Angry',    emoji: '😠' },
-  { emotion: 'Confused', emoji: '😕' },
+  { emotion: 'Happy',        emoji: '😊' },
+  { emotion: 'Excited',      emoji: '🤩' },
+  { emotion: 'Grateful',     emoji: '🙏' },
+  { emotion: 'Calm',         emoji: '😌' },
+  { emotion: 'Confused',     emoji: '😕' },
+  { emotion: 'Anxious',      emoji: '😰' },
+  { emotion: 'Angry',        emoji: '😠' },
+  { emotion: 'Sad',          emoji: '😢' },
+  { emotion: 'Disappointed', emoji: '😞' },
+  { emotion: 'Tired',        emoji: '😴' },
 ];
+const EMOTIONS = [...MOODS.map((m) => m.emotion), 'Neutral'];
+const EMOTION_EMOJI = Object.fromEntries(MOODS.map((m) => [m.emotion, m.emoji]));
+EMOTION_EMOJI.Content = '😌'; EMOTION_EMOJI.Neutral = '😐';
 const EMOTION_COLORS = {
-  Happy: '#ffd98a', Calm: '#a8e6cf', Content: '#a8e6cf', Sad: '#a9c8ff',
-  Anxious: '#d6c2ff', Angry: '#ffb3b3', Confused: '#ffc9a4', Disappointed: '#e6d5c3',
-};
-const EMOTION_EMOJI = {
-  Happy: '😊', Calm: '😌', Content: '😌', Sad: '😢', Anxious: '😰',
-  Angry: '😠', Confused: '😕', Disappointed: '😞', Neutral: '😐',
+  Happy: '#ffd98a', Excited: '#ffb877', Grateful: '#b8e6b0', Calm: '#a8e6cf', Content: '#a8e6cf',
+  Confused: '#ffc9a4', Anxious: '#d6c2ff', Angry: '#ffb3b3', Sad: '#a9c8ff',
+  Disappointed: '#e6d5c3', Tired: '#c9cdd6',
 };
 // Mirror of the backend mood-map coordinates (so Insights can be computed
 // client-side with a date filter, without a round-trip per range change).
 const EMOTION_COORDS = {
-  Happy: { valence: 0.8, arousal: 0.5 }, Calm: { valence: 0.5, arousal: -0.4 },
-  Content: { valence: 0.5, arousal: -0.4 }, Sad: { valence: -0.7, arousal: -0.3 },
+  Happy: { valence: 0.8, arousal: 0.5 }, Excited: { valence: 0.7, arousal: 0.9 },
+  Grateful: { valence: 0.7, arousal: -0.1 }, Calm: { valence: 0.5, arousal: -0.4 },
+  Content: { valence: 0.5, arousal: -0.4 }, Confused: { valence: -0.1, arousal: 0.25 },
   Anxious: { valence: -0.5, arousal: 0.7 }, Angry: { valence: -0.6, arousal: 0.8 },
-  Confused: { valence: -0.1, arousal: 0.25 }, Disappointed: { valence: -0.4, arousal: -0.2 },
+  Sad: { valence: -0.7, arousal: -0.3 }, Disappointed: { valence: -0.4, arousal: -0.2 },
+  Tired: { valence: -0.2, arousal: -0.7 },
 };
 
 let selectedMood = null;
@@ -176,7 +182,7 @@ async function onRecordingStopped(stream) {
   recordHint.textContent = 'Tap to record';
   liveTranscriptEl.textContent = '';
   resetMood();
-  showSuggestion(entry);
+  afterSave();
 }
 
 function startSpeechRecognition() {
@@ -223,32 +229,41 @@ async function saveTextEntry() {
   pendingEl.innerHTML = '';
   fileInput.value = '';
   resetMood();
-  showSuggestion(entry);
+  afterSave();
 }
 
 // ===========================================================================
-// SUGGESTION CARD (compact, side-by-side)
+// SAVE FEEDBACK — a quick "Saved" toast + a "Today" feed on the home page
+// (No verify modal: we save silently and auto-categorize in the background;
+//  you can always fix theme/emotion later from the Entries tab.)
 // ===========================================================================
-const suggestionCard = document.getElementById('suggestionCard');
-const themeSelect = document.getElementById('themeSelect');
-const emotionSelect = document.getElementById('emotionSelect');
-let currentEntryId = null;
+const toast = document.getElementById('toast');
+let toastTimer = null;
+function showToast(msg = '✓ Saved') {
+  toast.textContent = msg;
+  toast.classList.remove('hidden');
+  // force reflow so the transition replays even on rapid saves
+  void toast.offsetWidth;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 1700);
+}
 
-function fillSelect(select, options, selected) {
-  select.innerHTML = options.map((o) => `<option value="${o}" ${o === selected ? 'selected' : ''}>${o}</option>`).join('');
+function isToday(iso) {
+  const d = new Date(iso), n = new Date();
+  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
 }
-function showSuggestion(entry) {
-  currentEntryId = entry.id;
-  fillSelect(themeSelect, THEMES, entry.theme);
-  fillSelect(emotionSelect, EMOTIONS, entry.emotion);
-  suggestionCard.classList.remove('hidden');
+async function loadToday() {
+  const all = await api.listEntries();
+  const today = all.filter((e) => isToday(e.createdAt)).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  const list = document.getElementById('todayList');
+  list.innerHTML = today.length
+    ? today.map((e) => entryCardHTML(e, false)).join('')
+    : '<p class="empty" style="padding:14px 0;">Nothing yet today — record or type your first entry above.</p>';
 }
-themeSelect.addEventListener('change', () => api.updateEntry(currentEntryId, { theme: themeSelect.value }));
-emotionSelect.addEventListener('change', () => api.updateEntry(currentEntryId, { emotion: emotionSelect.value }));
-document.getElementById('confirmBtn').addEventListener('click', async () => {
-  await api.updateEntry(currentEntryId, { theme: themeSelect.value, emotion: emotionSelect.value, userConfirmed: true });
-  suggestionCard.classList.add('hidden');
-});
+
+// Called after any successful save.
+function afterSave() { showToast('✓ Saved'); loadToday(); }
 
 // ===========================================================================
 // ENTRIES — filter, sort, edit, delete
@@ -284,10 +299,7 @@ function entryCardHTML(entry, withActions = true) {
     <div class="entry-card" data-id="${entry.id}">
       <div class="entry-meta">
         <span class="badge theme">${entry.theme}</span>
-        <span class="entry-emotion" title="${entry.emotion}">
-          <span class="emo-emoji">${EMOTION_EMOJI[entry.emotion] || '😐'}</span>
-          <span class="emo-label">${entry.emotion}</span>
-        </span>
+        <span class="entry-emotion" title="${entry.emotion}">${EMOTION_EMOJI[entry.emotion] || '😐'}</span>
         <span class="entry-date">${fmtDate(entry.createdAt)}</span>
         ${actions}
       </div>
@@ -518,3 +530,4 @@ function renderSummary(entries) {
 // ---- init ----
 setupHero();
 setupMoodPicker();
+loadToday();

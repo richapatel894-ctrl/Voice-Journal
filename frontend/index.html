@@ -56,23 +56,16 @@
         </div>
         <div id="pendingAttachments" class="pending-attachments"></div>
       </div>
+
+      <!-- Today's entries, right here on Home -->
+      <div class="today-feed">
+        <h3 class="today-title">Today</h3>
+        <div id="todayList" class="entries-list"></div>
+      </div>
     </section>
 
-    <!-- ============ SUGGESTION CARD ============ -->
-    <div id="suggestionCard" class="suggestion-card hidden">
-      <p class="suggestion-title">Saved! Does this look right?</p>
-      <div class="pill-grid">
-        <label class="pill-field">Theme
-          <select id="themeSelect"></select>
-        </label>
-        <label class="pill-field">Emotion
-          <select id="emotionSelect"></select>
-        </label>
-      </div>
-      <div class="suggestion-actions">
-        <button id="confirmBtn" class="primary">Looks right ✓</button>
-      </div>
-    </div>
+    <!-- transient "Saved ✓" confirmation -->
+    <div id="toast" class="toast hidden">✓ Saved</div>
 
     <!-- ============ ENTRIES ============ -->
     <section id="tab-entries" class="tab-panel">

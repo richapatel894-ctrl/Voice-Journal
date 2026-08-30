@@ -1,0 +1,15 @@
+{
+  "id": "2026-08-30T17-22-31-023Z-m1m5",
+  "kind": "text",
+  "createdAt": "2026-08-30T17:22:31.023Z",
+  "text": "I am so exhausted and drained after today",
+  "theme": "Uncategorized",
+  "themeConfidence": 0,
+  "emotion": "Tired",
+  "emotionScores": {
+    "valence": -0.2,
+    "arousal": -0.7
+  },
+  "media": [],
+  "userConfirmed": false
+}

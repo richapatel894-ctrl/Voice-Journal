@@ -25,13 +25,16 @@ const THEMES = {
 // Each emotion has trigger words AND a position on the 2-D "mood map"
 // (valence = pleasant/unpleasant, arousal = high/low energy). See §4.
 const EMOTIONS = {
-  Happy:        { words: ['happy', 'great', 'joy', 'excited', 'love', 'wonderful', 'glad', 'proud', 'grateful', 'awesome'], valence:  0.8, arousal:  0.5 },
+  Happy:        { words: ['happy', 'great', 'joy', 'glad', 'proud', 'wonderful', 'awesome', 'cheerful'],                     valence:  0.8, arousal:  0.5 },
+  Excited:      { words: ['excited', 'thrilled', 'can\'t wait', 'pumped', 'stoked', 'ecstatic', 'buzzing'],                  valence:  0.7, arousal:  0.9 },
+  Grateful:     { words: ['grateful', 'thankful', 'blessed', 'appreciate', 'lucky'],                                        valence:  0.7, arousal: -0.1 },
   Calm:         { words: ['calm', 'peaceful', 'content', 'relaxed', 'satisfied', 'fine', 'okay', 'good', 'chill'],           valence:  0.5, arousal: -0.4 },
-  Sad:          { words: ['sad', 'down', 'cry', 'lonely', 'miss', 'hurt', 'lost', 'empty', 'unhappy'],                       valence: -0.7, arousal: -0.3 },
+  Confused:     { words: ['confused', 'unsure', 'puzzled', 'uncertain', 'torn', 'conflicted', 'mixed up', "don't know"],     valence: -0.1, arousal:  0.25 },
   Anxious:      { words: ['anxious', 'worried', 'nervous', 'stress', 'overwhelm', 'scared', 'afraid', 'panic', 'tense'],     valence: -0.5, arousal:  0.7 },
   Angry:        { words: ['angry', 'mad', 'furious', 'annoyed', 'frustrat', 'irritat', 'rage', 'upset'],                     valence: -0.6, arousal:  0.8 },
-  Confused:     { words: ['confused', 'unsure', 'puzzled', 'uncertain', 'torn', 'conflicted', 'mixed up', "don't know", 'lost'], valence: -0.1, arousal:  0.25 },
+  Sad:          { words: ['sad', 'down', 'cry', 'lonely', 'miss', 'hurt', 'lost', 'empty', 'unhappy'],                       valence: -0.7, arousal: -0.3 },
   Disappointed: { words: ['disappoint', 'let down', 'regret', 'unfortunate', 'expected more', 'failed', 'wish'],             valence: -0.4, arousal: -0.2 },
+  Tired:        { words: ['tired', 'exhausted', 'drained', 'sleepy', 'burnt out', 'burned out', 'weary', 'fatigued'],        valence: -0.2, arousal: -0.7 },
 };
 
 // Count how many trigger words from `list` appear in the lowercased text.
