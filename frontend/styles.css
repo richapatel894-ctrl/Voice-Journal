@@ -58,9 +58,8 @@ main { max-width: 720px; margin: 0 auto; padding: 24px; }
 /* ================= HERO (time-of-day sky) ================= */
 .hero {
   position: relative; overflow: hidden;
-  border-radius: 28px; padding: 30px 24px 26px;
+  border-radius: 28px; padding: 26px 24px 22px;
   text-align: center; box-shadow: var(--shadow);
-  min-height: 300px;
   transition: background 0.6s ease;
 }
 .sky { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: 28px; }
@@ -222,6 +221,10 @@ button.primary:hover { filter: brightness(1.05); }
 .badge.emotion[data-emotion="Confused"]     { background: var(--confused); }
 .badge.emotion[data-emotion="Disappointed"] { background: #e6d5c3; }
 .badge.emotion[data-emotion="Neutral"]      { background: var(--surface-2); color: var(--muted); }
+.entry-emotion { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.05; }
+.entry-emotion .emo-emoji { font-size: 1.15rem; }
+.entry-emotion .emo-label { font-size: 0.62rem; color: var(--muted); font-weight: 600; }
+.entry-date { color: var(--muted); }
 .entry-actions { margin-left: auto; display: flex; gap: 12px; }
 .icon-btn { background: none; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; }
 .icon-btn.edit { color: var(--pink-deep); }
@@ -232,6 +235,15 @@ button.primary:hover { filter: brightness(1.05); }
 .entry-media audio { height: 34px; }
 .entry-media a { color: var(--pink-deep); font-size: 0.85rem; }
 .empty { color: var(--muted); text-align: center; padding: 40px 0; }
+
+/* ---- media library ---- */
+.media-h { margin: 20px 0 10px; color: var(--pink-deep); font-size: 0.95rem; }
+.media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+.media-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; border: 1px solid var(--border); }
+.media-list { display: flex; flex-direction: column; gap: 8px; }
+.media-row { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: var(--shadow); }
+.media-row a { color: var(--pink-deep); word-break: break-all; }
+.media-date { color: var(--muted); font-size: 0.8rem; white-space: nowrap; }
 
 /* ---- insights ---- */
 .insights-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }

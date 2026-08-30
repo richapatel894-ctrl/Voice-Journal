@@ -48,6 +48,10 @@ const EMOTION_COLORS = {
   Happy: '#ffd98a', Calm: '#a8e6cf', Content: '#a8e6cf', Sad: '#a9c8ff',
   Anxious: '#d6c2ff', Angry: '#ffb3b3', Confused: '#ffc9a4', Disappointed: '#e6d5c3',
 };
+const EMOTION_EMOJI = {
+  Happy: '😊', Calm: '😌', Content: '😌', Sad: '😢', Anxious: '😰',
+  Angry: '😠', Confused: '😕', Disappointed: '😞', Neutral: '😐',
+};
 // Mirror of the backend mood-map coordinates (so Insights can be computed
 // client-side with a date filter, without a round-trip per range change).
 const EMOTION_COORDS = {
@@ -118,6 +122,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
     document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t === tab));
     document.querySelectorAll('.tab-panel').forEach((p) => p.classList.toggle('active', p.id === `tab-${name}`));
     if (name === 'entries') loadEntries();
+    if (name === 'media') loadMedia();
     if (name === 'insights') loadInsights();
   });
 });
@@ -279,8 +284,11 @@ function entryCardHTML(entry, withActions = true) {
     <div class="entry-card" data-id="${entry.id}">
       <div class="entry-meta">
         <span class="badge theme">${entry.theme}</span>
-        <span class="badge emotion" data-emotion="${entry.emotion}">${entry.emotion}</span>
-        <span>${fmtDate(entry.createdAt)}</span>
+        <span class="entry-emotion" title="${entry.emotion}">
+          <span class="emo-emoji">${EMOTION_EMOJI[entry.emotion] || '😐'}</span>
+          <span class="emo-label">${entry.emotion}</span>
+        </span>
+        <span class="entry-date">${fmtDate(entry.createdAt)}</span>
         ${actions}
       </div>
       <div class="entry-text">${escapeHTML(entry.text) || '<i>(no transcript)</i>'}</div>
@@ -353,6 +361,54 @@ document.getElementById('entriesList').addEventListener('click', async (ev) => {
     renderEntries();
   }
 });
+
+// ===========================================================================
+// MEDIA LIBRARY — every photo/audio/file + links found across all entries
+// ===========================================================================
+async function loadMedia() {
+  const all = await api.listEntries();
+  const images = [], audio = [], files = [], links = [];
+  const linkRe = /\bhttps?:\/\/[^\s)]+/gi;
+
+  for (const e of all) {
+    for (const name of (e.media || [])) {
+      const url = `/api/media/${encodeURIComponent(name)}`;
+      const item = { url, name, entry: e };
+      if (/\.(jpg|jpeg|png|gif|webp)$/i.test(name)) images.push(item);
+      else if (/\.(webm|mp3|wav|m4a)$/i.test(name)) audio.push(item);
+      else files.push(item);
+    }
+    // links captured from the entry text (typed or spoken URLs)
+    const found = (e.text || '').match(linkRe) || [];
+    found.forEach((u) => links.push({ url: u, entry: e }));
+  }
+
+  const box = document.getElementById('mediaGroups');
+  const sections = [];
+
+  if (images.length) sections.push(`
+    <h4 class="media-h">📷 Photos & video (${images.length})</h4>
+    <div class="media-grid">${images.map((m) =>
+      `<a href="${m.url}" target="_blank"><img src="${m.url}" alt="${m.name}"/></a>`).join('')}</div>`);
+
+  if (audio.length) sections.push(`
+    <h4 class="media-h">🎙 Voice clips (${audio.length})</h4>
+    <div class="media-list">${audio.map((m) =>
+      `<div class="media-row"><audio controls src="${m.url}"></audio><span class="media-date">${fmtDate(m.entry.createdAt)}</span></div>`).join('')}</div>`);
+
+  if (files.length) sections.push(`
+    <h4 class="media-h">📎 Files (${files.length})</h4>
+    <div class="media-list">${files.map((m) =>
+      `<div class="media-row"><a href="${m.url}" target="_blank">${escapeHTML(m.name)}</a></div>`).join('')}</div>`);
+
+  if (links.length) sections.push(`
+    <h4 class="media-h">🔗 Links (${links.length})</h4>
+    <div class="media-list">${links.map((m) =>
+      `<div class="media-row"><a href="${escapeHTML(m.url)}" target="_blank">${escapeHTML(m.url)}</a></div>`).join('')}</div>`);
+
+  box.innerHTML = sections.length ? sections.join('') :
+    '<p class="empty">No media yet. Attach a photo/file, record a voice note, or drop a link in an entry.</p>';
+}
 
 // ===========================================================================
 // INSIGHTS — "My Emotional Map" (date-filtered, computed client-side)
