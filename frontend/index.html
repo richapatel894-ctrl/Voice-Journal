@@ -10,30 +10,42 @@
   <header class="topbar">
     <h1>🎙 Voice Journal</h1>
     <nav class="tabs">
-      <button class="tab active" data-tab="record">Record</button>
+      <button class="tab active" data-tab="record">Home</button>
       <button class="tab" data-tab="entries">Entries</button>
       <button class="tab" data-tab="insights">Insights</button>
     </nav>
   </header>
 
   <main>
-    <!-- ============ RECORD (the primary screen) ============ -->
+    <!-- ============ HOME / RECORD (the primary screen) ============ -->
     <section id="tab-record" class="tab-panel active">
-      <div class="record-stage">
-        <button id="recordBtn" class="record-btn" aria-label="Record">
-          <span class="mic-icon">🎙</span>
-        </button>
-        <p id="recordHint" class="hint">Tap to start recording</p>
-        <p id="liveTranscript" class="live-transcript"></p>
+      <div id="hero" class="hero scene-day">
+        <!-- animated sky elements -->
+        <div class="sun"></div>
+        <div class="moon"></div>
+        <div class="cloud c1"></div>
+        <div class="cloud c2"></div>
+        <div class="stars" id="stars"></div>
+
+        <div class="hero-content">
+          <p class="greeting" id="greeting">Hello</p>
+          <h2 class="feeling-q">How are you feeling today?</h2>
+          <div class="mood-picker" id="moodPicker"></div>
+        </div>
       </div>
 
-      <div class="divider"><span>or write it</span></div>
+      <div class="capture-actions">
+        <button id="recordBtn" class="capture-btn record"><span class="ico">🎙</span> Record</button>
+        <button id="writeBtn" class="capture-btn write"><span class="ico">✍️</span> Type in</button>
+      </div>
+      <p id="recordHint" class="record-hint">Tap record, or type in your entry</p>
+      <p id="liveTranscript" class="live-transcript"></p>
 
-      <div class="text-compose">
-        <textarea id="textInput" placeholder="Type an entry…"></textarea>
+      <div id="composeBox" class="text-compose hidden">
+        <textarea id="textInput" placeholder="Type in your entry…"></textarea>
         <div class="compose-actions">
           <label class="attach-btn">
-            📎 Attach
+            📎 Attach photo / file
             <input type="file" id="fileInput" multiple hidden />
           </label>
           <button id="saveTextBtn" class="primary">Save entry</button>
@@ -61,8 +73,20 @@
     <!-- ============ ENTRIES ============ -->
     <section id="tab-entries" class="tab-panel">
       <div class="filters">
-        <select id="filterTheme"><option value="">All themes</option></select>
-        <select id="filterEmotion"><option value="">All emotions</option></select>
+        <label class="field">Theme
+          <select id="filterTheme"><option value="">All themes</option></select>
+        </label>
+        <label class="field">Emotion
+          <select id="filterEmotion"><option value="">All emotions</option></select>
+        </label>
+        <label class="field">Sort by
+          <select id="sortBy">
+            <option value="date-desc">Date (newest)</option>
+            <option value="date-asc">Date (oldest)</option>
+            <option value="theme">Theme (A–Z)</option>
+            <option value="emotion">Emotion (A–Z)</option>
+          </select>
+        </label>
       </div>
       <div id="entriesList" class="entries-list"></div>
     </section>

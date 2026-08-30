@@ -82,7 +82,16 @@ const server = http.createServer(async (req, res) => {
       const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
       const text = body.text || '';
       const { theme, confidence } = classifyTheme(text);
-      const { emotion, scores } = classifyEmotion(text);
+      const auto = classifyEmotion(text);
+
+      // If the user picked a mood on the home screen, that wins over the
+      // keyword guess (self-reported feelings beat inferred ones).
+      let emotion = auto.emotion;
+      let scores = auto.scores;
+      if (typeof body.emotion === 'string' && EMOTION_COORDS[body.emotion]) {
+        emotion = body.emotion;
+        scores = EMOTION_COORDS[body.emotion];
+      }
 
       const entry = {
         id: storage.newId(),
@@ -118,6 +127,7 @@ const server = http.createServer(async (req, res) => {
       // PATCH /api/entries/:id   body: { theme?, emotion?, userConfirmed? }
       if (method === 'PATCH' && parts.length === 3) {
         const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
+        if (typeof body.text === 'string') entry.text = body.text;
         if (typeof body.theme === 'string') entry.theme = body.theme;
         if (typeof body.emotion === 'string') {
           entry.emotion = body.emotion;

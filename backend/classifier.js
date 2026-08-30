@@ -26,7 +26,7 @@ const THEMES = {
 // (valence = pleasant/unpleasant, arousal = high/low energy). See §4.
 const EMOTIONS = {
   Happy:        { words: ['happy', 'great', 'joy', 'excited', 'love', 'wonderful', 'glad', 'proud', 'grateful', 'awesome'], valence:  0.8, arousal:  0.5 },
-  Content:      { words: ['calm', 'peaceful', 'content', 'relaxed', 'satisfied', 'fine', 'okay', 'good'],                     valence:  0.5, arousal: -0.4 },
+  Calm:         { words: ['calm', 'peaceful', 'content', 'relaxed', 'satisfied', 'fine', 'okay', 'good', 'chill'],           valence:  0.5, arousal: -0.4 },
   Sad:          { words: ['sad', 'down', 'cry', 'lonely', 'miss', 'hurt', 'lost', 'empty', 'unhappy'],                       valence: -0.7, arousal: -0.3 },
   Anxious:      { words: ['anxious', 'worried', 'nervous', 'stress', 'overwhelm', 'scared', 'afraid', 'panic', 'tense'],     valence: -0.5, arousal:  0.7 },
   Angry:        { words: ['angry', 'mad', 'furious', 'annoyed', 'frustrat', 'irritat', 'rage', 'upset'],                     valence: -0.6, arousal:  0.8 },
@@ -84,5 +84,7 @@ function classifyEmotion(text) {
 const EMOTION_COORDS = Object.fromEntries(
   Object.entries(EMOTIONS).map(([name, d]) => [name, { valence: d.valence, arousal: d.arousal }])
 );
+// Legacy alias: older entries may still use "Content" (now "Calm").
+EMOTION_COORDS.Content = EMOTION_COORDS.Calm;
 
 module.exports = { classifyTheme, classifyEmotion, EMOTION_COORDS, THEMES, EMOTIONS };
