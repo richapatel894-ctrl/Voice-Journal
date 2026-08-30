@@ -7,10 +7,10 @@
 
 // ---- tiny API client (each call = one HTTP round-trip) --------------------
 const api = {
-  async createEntry(kind, text, emotion) {
+  async createEntry(kind, text) {
     const res = await fetch('/api/entries', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kind, text, emotion }),
+      body: JSON.stringify({ kind, text }),
     });
     return res.json();
   },
@@ -35,7 +35,9 @@ const api = {
 };
 
 const THEMES = ['Toastmasters', 'Work', 'Personal Growth', 'Cooking', 'Traveling', 'Relationships', 'Uncategorized'];
-// The mood check-in + full emotion list (kept in sync with backend classifier.js).
+// The full emotion list + emoji (kept in sync with backend classifier.js).
+// Emotion is auto-detected from the entry text on save; there is no mood
+// check-in on the home screen. Users can still set/correct it per entry.
 const MOODS = [
   { emotion: 'Happy',        emoji: '😊' },
   { emotion: 'Excited',      emoji: '🤩' },
@@ -67,7 +69,9 @@ const EMOTION_COORDS = {
   Tired: { valence: -0.2, arousal: -0.7 },
 };
 
-let selectedMood = null;
+// Every entry, newest first — shared by the Entries tab and the Home "Today"
+// feed so edits/deletes made in either place stay in sync.
+let allEntriesCache = [];
 
 // ===========================================================================
 // TIME-OF-DAY sky + greeting
@@ -95,28 +99,6 @@ function setupHero() {
     s.style.animationDelay = (Math.random() * 2.4).toFixed(2) + 's';
     stars.appendChild(s);
   }
-}
-
-function setupMoodPicker() {
-  const picker = document.getElementById('moodPicker');
-  picker.innerHTML = MOODS.map((m) => `
-    <button class="mood" data-mood="${m.emotion}">
-      <span class="emoji">${m.emoji}</span>
-      <span class="label">${m.emotion}</span>
-    </button>`).join('');
-  picker.querySelectorAll('.mood').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const mood = btn.dataset.mood;
-      if (selectedMood === mood) { selectedMood = null; btn.classList.remove('selected'); return; }
-      selectedMood = mood;
-      picker.querySelectorAll('.mood').forEach((b) => b.classList.toggle('selected', b === btn));
-    });
-  });
-}
-
-function resetMood() {
-  selectedMood = null;
-  document.querySelectorAll('.mood').forEach((b) => b.classList.remove('selected'));
 }
 
 // ===========================================================================
@@ -177,11 +159,10 @@ async function onRecordingStopped(stream) {
   stream.getTracks().forEach((t) => t.stop());
   const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
   const transcript = (liveText || liveTranscriptEl.textContent || '').trim();
-  const entry = await api.createEntry('voice', transcript, selectedMood);
+  const entry = await api.createEntry('voice', transcript);
   await api.uploadMedia(entry.id, 'audio.webm', audioBlob);
   recordHint.textContent = 'Tap to record';
   liveTranscriptEl.textContent = '';
-  resetMood();
   afterSave();
 }
 
@@ -222,13 +203,12 @@ document.getElementById('saveTextBtn').addEventListener('click', saveTextEntry);
 async function saveTextEntry() {
   const text = textInput.value.trim();
   if (!text && pendingFiles.length === 0) return;
-  const entry = await api.createEntry('text', text, selectedMood);
+  const entry = await api.createEntry('text', text);
   for (const file of pendingFiles) await api.uploadMedia(entry.id, file.name, file);
   textInput.value = '';
   pendingFiles = [];
   pendingEl.innerHTML = '';
   fileInput.value = '';
-  resetMood();
   afterSave();
 }
 
@@ -253,13 +233,26 @@ function isToday(iso) {
   const d = new Date(iso), n = new Date();
   return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
 }
-async function loadToday() {
-  const all = await api.listEntries();
-  const today = all.filter((e) => isToday(e.createdAt)).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-  const list = document.getElementById('todayList');
-  list.innerHTML = today.length
-    ? today.map((e) => entryCardHTML(e, false)).join('')
+// Render the Home "Today" feed from the shared cache (each card is editable).
+function renderToday() {
+  const today = allEntriesCache
+    .filter((e) => isToday(e.createdAt))
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  document.getElementById('todayList').innerHTML = today.length
+    ? today.map((e) => entryCardHTML(e, true)).join('')
     : '<p class="empty" style="padding:14px 0;">Nothing yet today — record or type your first entry above.</p>';
+}
+
+async function loadToday() {
+  allEntriesCache = await api.listEntries();
+  renderToday();
+}
+
+// Re-render both entry lists (Entries tab + Home "Today") from the cache so an
+// edit or delete in one place immediately shows in the other.
+function refreshEntryLists() {
+  renderEntries();
+  renderToday();
 }
 
 // Called after any successful save.
@@ -295,11 +288,14 @@ function entryCardHTML(entry, withActions = true) {
       <button class="icon-btn edit" data-action="edit">✎ Edit</button>
       <button class="icon-btn delete" data-action="delete">🗑 Delete</button>
     </div>` : '';
+  const emotionTag = entry.emotion
+    ? `<span class="entry-emotion" title="${entry.emotion}">${EMOTION_EMOJI[entry.emotion] || '😐'}</span>`
+    : '';
   return `
     <div class="entry-card" data-id="${entry.id}">
       <div class="entry-meta">
         <span class="badge theme">${entry.theme}</span>
-        <span class="entry-emotion" title="${entry.emotion}">${EMOTION_EMOJI[entry.emotion] || '😐'}</span>
+        ${emotionTag}
         <span class="entry-date">${fmtDate(entry.createdAt)}</span>
         ${actions}
       </div>
@@ -311,7 +307,9 @@ function entryCardHTML(entry, withActions = true) {
 // Editable card (compact, side-by-side theme/emotion)
 function entryEditHTML(entry) {
   const themeOpts = THEMES.map((t) => `<option value="${t}" ${t === entry.theme ? 'selected' : ''}>${t}</option>`).join('');
-  const emoOpts = EMOTIONS.map((e) => `<option value="${e}" ${e === entry.emotion ? 'selected' : ''}>${e}</option>`).join('');
+  const emoOpts = [`<option value="" ${!entry.emotion ? 'selected' : ''}>— none —</option>`]
+    .concat(EMOTIONS.map((e) => `<option value="${e}" ${e === entry.emotion ? 'selected' : ''}>${e}</option>`))
+    .join('');
   return `
     <div class="entry-card" data-id="${entry.id}">
       <div class="entry-meta"><span>${fmtDate(entry.createdAt)}</span></div>
@@ -328,7 +326,6 @@ function entryEditHTML(entry) {
     </div>`;
 }
 
-let allEntriesCache = [];
 async function loadEntries() { allEntriesCache = await api.listEntries(); renderEntries(); }
 
 function renderEntries() {
@@ -344,7 +341,9 @@ function renderEntries() {
   container.innerHTML = list.length ? list.map((e) => entryCardHTML(e)).join('') : '<p class="empty">No entries yet. Go record one!</p>';
 }
 
-document.getElementById('entriesList').addEventListener('click', async (ev) => {
+// One handler drives edit/delete for both the Entries tab and the Home
+// "Today" feed. After any change we re-render both lists from the cache.
+async function onEntryListClick(ev) {
   const btn = ev.target.closest('[data-action]');
   if (!btn) return;
   const card = btn.closest('.entry-card');
@@ -353,12 +352,12 @@ document.getElementById('entriesList').addEventListener('click', async (ev) => {
   const entry = allEntriesCache.find((e) => e.id === id);
 
   if (action === 'edit') { card.outerHTML = entryEditHTML(entry); return; }
-  if (action === 'cancel') { renderEntries(); return; }
+  if (action === 'cancel') { refreshEntryLists(); return; }
   if (action === 'delete') {
     if (!confirm('Delete this entry? It moves to a Trash folder and can be recovered.')) return;
     await api.deleteEntry(id);
     allEntriesCache = allEntriesCache.filter((e) => e.id !== id);
-    renderEntries();
+    refreshEntryLists();
     return;
   }
   if (action === 'save') {
@@ -370,9 +369,12 @@ document.getElementById('entriesList').addEventListener('click', async (ev) => {
     const updated = await api.updateEntry(id, patch);
     const i = allEntriesCache.findIndex((e) => e.id === id);
     if (i >= 0) allEntriesCache[i] = updated;
-    renderEntries();
+    refreshEntryLists();
   }
-});
+}
+
+document.getElementById('entriesList').addEventListener('click', onEntryListClick);
+document.getElementById('todayList').addEventListener('click', onEntryListClick);
 
 // ===========================================================================
 // MEDIA LIBRARY — every photo/audio/file + links found across all entries
@@ -529,5 +531,4 @@ function renderSummary(entries) {
 
 // ---- init ----
 setupHero();
-setupMoodPicker();
 loadToday();

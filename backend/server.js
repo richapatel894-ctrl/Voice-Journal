@@ -84,8 +84,10 @@ const server = http.createServer(async (req, res) => {
       const { theme, confidence } = classifyTheme(text);
       const auto = classifyEmotion(text);
 
-      // If the user picked a mood on the home screen, that wins over the
-      // keyword guess (self-reported feelings beat inferred ones).
+      // Emotion is inferred from the entry text (see classifier.js). If the
+      // caller explicitly passes a known emotion, that wins over the guess
+      // (self-reported feelings beat inferred ones). An empty result means
+      // "no feeling detected" — the entry is saved without one.
       let emotion = auto.emotion;
       let scores = auto.scores;
       if (typeof body.emotion === 'string' && EMOTION_COORDS[body.emotion]) {
@@ -131,7 +133,7 @@ const server = http.createServer(async (req, res) => {
         if (typeof body.theme === 'string') entry.theme = body.theme;
         if (typeof body.emotion === 'string') {
           entry.emotion = body.emotion;
-          if (EMOTION_COORDS[body.emotion]) entry.emotionScores = EMOTION_COORDS[body.emotion];
+          entry.emotionScores = EMOTION_COORDS[body.emotion] || null;
         }
         if (typeof body.userConfirmed === 'boolean') entry.userConfirmed = body.userConfirmed;
         storage.saveEntry(entry);

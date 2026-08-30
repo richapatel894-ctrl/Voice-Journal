@@ -74,7 +74,7 @@ main { max-width: 720px; margin: 0 auto; padding: 24px; }
 
 .hero-content { position: relative; z-index: 3; }
 .greeting { margin: 0 0 4px; font-size: 0.95rem; font-weight: 600; opacity: 0.9; }
-.feeling-q { margin: 0 0 20px; font-size: 1.5rem; font-weight: 700; }
+.feeling-q { margin: 0; font-size: 1.5rem; font-weight: 700; }
 .hero.scene-sunset .hero-content,
 .hero.scene-night .hero-content { color: #fff; }
 
@@ -130,29 +130,6 @@ main { max-width: 720px; margin: 0 auto; padding: 24px; }
 @keyframes drift   { from { transform: translateX(0); } to { transform: translateX(640px); } }
 @keyframes twinkle { 0%,100% { opacity: 0.2; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
 @media (prefers-reduced-motion: reduce) { .sun,.moon,.cloud,.star { animation: none !important; } }
-
-/* ---- mood picker ---- */
-.mood-picker { display: flex; justify-content: center; gap: 9px; flex-wrap: wrap; }
-.mood {
-  display: flex; flex-direction: column; align-items: center; gap: 5px;
-  background: rgba(255,255,255,0.85); border: 2px solid transparent;
-  border-radius: 16px; padding: 9px 11px; cursor: pointer; min-width: 60px;
-  transition: transform 0.12s ease, border-color 0.12s ease;
-}
-.mood:hover { transform: translateY(-3px); }
-.mood .emoji { font-size: 1.7rem; line-height: 1; }
-.mood .label { font-size: 0.7rem; font-weight: 600; color: var(--text); }
-.mood.selected { transform: translateY(-3px) scale(1.03); }
-.mood[data-mood="Happy"].selected        { border-color: var(--happy);        background: var(--happy); }
-.mood[data-mood="Excited"].selected      { border-color: var(--excited);      background: var(--excited); }
-.mood[data-mood="Grateful"].selected     { border-color: var(--grateful);     background: var(--grateful); }
-.mood[data-mood="Calm"].selected         { border-color: var(--calm);         background: var(--calm); }
-.mood[data-mood="Confused"].selected     { border-color: var(--confused);     background: var(--confused); }
-.mood[data-mood="Anxious"].selected      { border-color: var(--anxious);      background: var(--anxious); }
-.mood[data-mood="Angry"].selected        { border-color: var(--angry);        background: var(--angry); }
-.mood[data-mood="Sad"].selected          { border-color: var(--sad);          background: var(--sad); }
-.mood[data-mood="Disappointed"].selected { border-color: var(--disappointed); background: var(--disappointed); }
-.mood[data-mood="Tired"].selected        { border-color: var(--tired);        background: var(--tired); }
 
 /* ================= RECORD BANNER (prominent) ================= */
 .record-banner {

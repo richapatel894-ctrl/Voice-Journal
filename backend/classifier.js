@@ -67,20 +67,26 @@ function classifyTheme(text) {
 }
 
 /**
- * classifyEmotion(text) -> { emotion, scores:{valence, arousal} }
+ * classifyEmotion(text) -> { emotion, scores:{valence, arousal} | null }
  * Picks the emotion with the most keyword hits and returns its mood-map
- * coordinates (used by the visualization).
+ * coordinates (used by the visualization). If nothing matches (e.g. a
+ * photo-only entry, or a voice note the browser couldn't transcribe), we
+ * return an EMPTY emotion — the entry simply has no feeling attached until
+ * the user sets one from the Entries tab.
  */
 function classifyEmotion(text) {
   const t = (text || '').toLowerCase();
-  let best = { emotion: 'Neutral', hits: 0, valence: 0, arousal: 0 };
+  let best = { emotion: '', hits: 0, valence: 0, arousal: 0 };
 
   for (const [emotion, def] of Object.entries(EMOTIONS)) {
     const hits = countHits(t, def.words);
     if (hits > best.hits) best = { emotion, hits, valence: def.valence, arousal: def.arousal };
   }
 
-  return { emotion: best.emotion, scores: { valence: best.valence, arousal: best.arousal } };
+  return {
+    emotion: best.emotion,
+    scores: best.emotion ? { valence: best.valence, arousal: best.arousal } : null,
+  };
 }
 
 // The canonical coordinates, exported so the stats endpoint can place ANY
