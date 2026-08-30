@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Voice Journal</title>
+  <title>MyVoice</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <header class="topbar">
-    <h1>🎙 Voice Journal</h1>
+    <h1>🎙 MyVoice</h1>
     <nav class="tabs">
       <button class="tab active" data-tab="record">Home</button>
       <button class="tab" data-tab="entries">Entries</button>
@@ -17,16 +17,18 @@
   </header>
 
   <main>
-    <!-- ============ HOME / RECORD (the primary screen) ============ -->
+    <!-- ============ HOME ============ -->
     <section id="tab-record" class="tab-panel active">
+      <!-- 1) Greeting banner with animated time-of-day sky -->
       <div id="hero" class="hero scene-day">
-        <!-- animated sky elements -->
-        <div class="sun"></div>
-        <div class="moon"></div>
-        <div class="cloud c1"></div>
-        <div class="cloud c2"></div>
-        <div class="stars" id="stars"></div>
-
+        <div class="sky">
+          <div class="sun"></div>
+          <div class="moon"></div>
+          <div class="cloud c1"></div>
+          <div class="cloud c2"></div>
+          <div class="cloud c3"></div>
+          <div class="stars" id="stars"></div>
+        </div>
         <div class="hero-content">
           <p class="greeting" id="greeting">Hello</p>
           <h2 class="feeling-q">How are you feeling today?</h2>
@@ -34,15 +36,16 @@
         </div>
       </div>
 
-      <div class="capture-actions">
-        <button id="recordBtn" class="capture-btn record"><span class="ico">🎙</span> Record</button>
-        <button id="writeBtn" class="capture-btn write"><span class="ico">✍️</span> Type in</button>
+      <!-- 2) Record banner (the prominent primary action) -->
+      <div class="record-banner">
+        <button id="recordBtn" class="record-orb" aria-label="Record"><span class="ico">🎙</span></button>
+        <p id="recordHint" class="record-hint">Tap to record</p>
+        <p id="liveTranscript" class="live-transcript"></p>
       </div>
-      <p id="recordHint" class="record-hint">Tap record, or type in your entry</p>
-      <p id="liveTranscript" class="live-transcript"></p>
 
-      <div id="composeBox" class="text-compose hidden">
-        <textarea id="textInput" placeholder="Type in your entry…"></textarea>
+      <!-- 3) Type-in box (always visible, secondary) -->
+      <div id="composeBox" class="text-compose">
+        <textarea id="textInput" placeholder="Or type in your entry…"></textarea>
         <div class="compose-actions">
           <label class="attach-btn">
             📎 Attach photo / file
@@ -54,16 +57,16 @@
       </div>
     </section>
 
-    <!-- ============ SUGGESTION CARD (appears after save) ============ -->
+    <!-- ============ SUGGESTION CARD ============ -->
     <div id="suggestionCard" class="suggestion-card hidden">
       <p class="suggestion-title">Saved! Does this look right?</p>
-      <div class="suggestion-row">
-        <label>Theme</label>
-        <select id="themeSelect"></select>
-      </div>
-      <div class="suggestion-row">
-        <label>Emotion</label>
-        <select id="emotionSelect"></select>
+      <div class="pill-grid">
+        <label class="pill-field">Theme
+          <select id="themeSelect"></select>
+        </label>
+        <label class="pill-field">Emotion
+          <select id="emotionSelect"></select>
+        </label>
       </div>
       <div class="suggestion-actions">
         <button id="confirmBtn" class="primary">Looks right ✓</button>
@@ -91,14 +94,20 @@
       <div id="entriesList" class="entries-list"></div>
     </section>
 
-    <!-- ============ INSIGHTS (visualization) ============ -->
+    <!-- ============ INSIGHTS ============ -->
     <section id="tab-insights" class="tab-panel">
-      <p class="insights-caption">
-        Your emotions on the <b>mood map</b>. Bigger circle = more entries.
-        Left↔right = unpleasant↔pleasant. Up↔down = high↔low energy.
-        <b>Click a circle</b> to see its entries.
-      </p>
+      <div class="insights-header">
+        <h2 class="insights-title">My Emotional Map</h2>
+        <select id="rangeFilter">
+          <option value="3m">Last 3 months</option>
+          <option value="6m">Last 6 months</option>
+          <option value="12m">Last 12 months</option>
+          <option value="year">This year</option>
+          <option value="all">All time</option>
+        </select>
+      </div>
       <div id="scatter"></div>
+      <div id="insightSummary" class="insight-summary"></div>
       <div id="scatterEntries" class="entries-list"></div>
     </section>
   </main>

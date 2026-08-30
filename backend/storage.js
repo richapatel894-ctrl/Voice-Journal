@@ -59,6 +59,18 @@ function listEntries() {
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
+// Soft delete: move the entry file into data/trash/ instead of destroying it,
+// so an accidental delete is always recoverable. (See TECH_DESIGN.md.)
+const TRASH_DIR = path.join(DATA_DIR, 'trash');
+function trashEntry(id) {
+  fs.mkdirSync(TRASH_DIR, { recursive: true });
+  const p = entryPath(id);
+  if (!fs.existsSync(p)) return false;
+  const safe = String(id).replace(/[^a-zA-Z0-9._-]/g, '');
+  fs.renameSync(p, path.join(TRASH_DIR, `${safe}.json`));
+  return true;
+}
+
 // --- Media (WhatsApp-style single store) -----------------------------------
 function mediaPath(filename) {
   const safe = String(filename).replace(/[^a-zA-Z0-9._-]/g, '');
@@ -80,6 +92,6 @@ function readMedia(filename) {
 module.exports = {
   DATA_DIR, ENTRIES_DIR, MEDIA_DIR,
   ensureDirs, newId,
-  saveEntry, getEntry, listEntries,
+  saveEntry, getEntry, listEntries, trashEntry,
   saveMedia, readMedia, mediaPath,
 };

@@ -30,6 +30,7 @@ const EMOTIONS = {
   Sad:          { words: ['sad', 'down', 'cry', 'lonely', 'miss', 'hurt', 'lost', 'empty', 'unhappy'],                       valence: -0.7, arousal: -0.3 },
   Anxious:      { words: ['anxious', 'worried', 'nervous', 'stress', 'overwhelm', 'scared', 'afraid', 'panic', 'tense'],     valence: -0.5, arousal:  0.7 },
   Angry:        { words: ['angry', 'mad', 'furious', 'annoyed', 'frustrat', 'irritat', 'rage', 'upset'],                     valence: -0.6, arousal:  0.8 },
+  Confused:     { words: ['confused', 'unsure', 'puzzled', 'uncertain', 'torn', 'conflicted', 'mixed up', "don't know", 'lost'], valence: -0.1, arousal:  0.25 },
   Disappointed: { words: ['disappoint', 'let down', 'regret', 'unfortunate', 'expected more', 'failed', 'wish'],             valence: -0.4, arousal: -0.2 },
 };
 

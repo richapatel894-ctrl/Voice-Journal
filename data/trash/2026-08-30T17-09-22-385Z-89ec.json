@@ -1,0 +1,15 @@
+{
+  "id": "2026-08-30T17-09-22-385Z-89ec",
+  "kind": "text",
+  "createdAt": "2026-08-30T17:09:22.385Z",
+  "text": "I feel torn and unsure about this decision",
+  "theme": "Uncategorized",
+  "themeConfidence": 0,
+  "emotion": "Confused",
+  "emotionScores": {
+    "valence": -0.1,
+    "arousal": 0.25
+  },
+  "media": [],
+  "userConfirmed": false
+}

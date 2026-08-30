@@ -138,6 +138,12 @@ const server = http.createServer(async (req, res) => {
         return sendJSON(res, 200, entry);
       }
 
+      // DELETE /api/entries/:id  (soft delete → moved to data/trash/)
+      if (method === 'DELETE' && parts.length === 3) {
+        storage.trashEntry(id);
+        return sendJSON(res, 200, { deleted: id });
+      }
+
       // POST /api/entries/:id/media?filename=foo.webp   body: raw bytes
       if (method === 'POST' && parts[3] === 'media') {
         const raw = url.searchParams.get('filename') || 'file';
