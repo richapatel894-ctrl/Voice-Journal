@@ -1,77 +1,119 @@
 'use strict';
-/*
- * storage.js — the ONLY module that touches the disk.
- *
- * Everything about "where and how data is saved" lives here. The rest of the
- * app calls these functions and never thinks about files. This is the
- * "storage swap point": to move to a real database later, you rewrite THIS
- * file and nothing else. (See TECH_DESIGN.md §1, §2.)
- */
-
+const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 
-// Data lives in <project>/data — one level up from backend/.
-const DATA_DIR = path.join(__dirname, '..', 'data');
-const ENTRIES_DIR = path.join(DATA_DIR, 'entries');
+const DATA_DIR  = path.join(__dirname, '..', 'data');
 const MEDIA_DIR = path.join(DATA_DIR, 'media');
+const DB_PATH   = path.join(DATA_DIR, 'journal.db');
 
-// Make sure the folders exist on startup (idempotent).
-function ensureDirs() {
-  for (const dir of [DATA_DIR, ENTRIES_DIR, MEDIA_DIR]) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
+fs.mkdirSync(MEDIA_DIR, { recursive: true });
 
-// Build a unique, sortable id from the current time + a little randomness.
-// Example: 2026-07-23T18-04-11-123Z-a1b2
+const db = new Database(DB_PATH);
+
+// Enable WAL mode for better concurrent read performance
+db.pragma('journal_mode = WAL');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS entries (
+    id          TEXT PRIMARY KEY,
+    kind        TEXT NOT NULL DEFAULT 'text',
+    created_at  TEXT NOT NULL,
+    text        TEXT NOT NULL DEFAULT '',
+    theme       TEXT,
+    theme_confidence REAL,
+    emotion     TEXT,
+    valence     REAL,
+    arousal     REAL,
+    media       TEXT NOT NULL DEFAULT '[]',
+    user_confirmed INTEGER NOT NULL DEFAULT 0
+  );
+`);
+
 function newId() {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const rand = Math.random().toString(36).slice(2, 6);
+  const rand  = Math.random().toString(36).slice(2, 6);
   return `${stamp}-${rand}`;
 }
 
-function entryPath(id) {
-  // Guard against path traversal: only allow our own id characters.
-  const safe = String(id).replace(/[^a-zA-Z0-9._-]/g, '');
-  return path.join(ENTRIES_DIR, `${safe}.json`);
+function rowToEntry(row) {
+  if (!row) return null;
+  return {
+    id:               row.id,
+    kind:             row.kind,
+    createdAt:        row.created_at,
+    text:             row.text,
+    theme:            row.theme,
+    themeConfidence:  row.theme_confidence,
+    emotion:          row.emotion,
+    emotionScores:    row.valence != null ? { valence: row.valence, arousal: row.arousal } : null,
+    media:            JSON.parse(row.media || '[]'),
+    userConfirmed:    row.user_confirmed === 1,
+  };
 }
 
+const insertStmt = db.prepare(`
+  INSERT INTO entries (id, kind, created_at, text, theme, theme_confidence, emotion, valence, arousal, media, user_confirmed)
+  VALUES (@id, @kind, @created_at, @text, @theme, @theme_confidence, @emotion, @valence, @arousal, @media, @user_confirmed)
+`);
+
+const updateStmt = db.prepare(`
+  UPDATE entries SET
+    text = @text, theme = @theme, theme_confidence = @theme_confidence,
+    emotion = @emotion, valence = @valence, arousal = @arousal,
+    media = @media, user_confirmed = @user_confirmed
+  WHERE id = @id
+`);
+
 function saveEntry(entry) {
-  fs.writeFileSync(entryPath(entry.id), JSON.stringify(entry, null, 2), 'utf8');
+  const row = {
+    id:               entry.id,
+    kind:             entry.kind,
+    created_at:       entry.createdAt,
+    text:             entry.text || '',
+    theme:            entry.theme || null,
+    theme_confidence: entry.themeConfidence ?? null,
+    emotion:          entry.emotion || null,
+    valence:          entry.emotionScores?.valence ?? null,
+    arousal:          entry.emotionScores?.arousal ?? null,
+    media:            JSON.stringify(entry.media || []),
+    user_confirmed:   entry.userConfirmed ? 1 : 0,
+  };
+  const exists = db.prepare('SELECT id FROM entries WHERE id = ?').get(entry.id);
+  if (exists) updateStmt.run(row);
+  else insertStmt.run(row);
   return entry;
 }
 
 function getEntry(id) {
-  const p = entryPath(id);
-  if (!fs.existsSync(p)) return null;
-  return JSON.parse(fs.readFileSync(p, 'utf8'));
+  return rowToEntry(db.prepare('SELECT * FROM entries WHERE id = ?').get(id));
 }
 
-// List ALL entries, newest first. Note: this opens every file — fine for a
-// personal app, and a deliberate teaching moment about why databases index.
-function listEntries() {
-  if (!fs.existsSync(ENTRIES_DIR)) return [];
-  return fs
-    .readdirSync(ENTRIES_DIR)
-    .filter((f) => f.endsWith('.json'))
-    .map((f) => JSON.parse(fs.readFileSync(path.join(ENTRIES_DIR, f), 'utf8')))
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+function listEntries({ theme, emotion } = {}) {
+  let sql = 'SELECT * FROM entries WHERE 1=1';
+  const params = [];
+  if (theme)   { sql += ' AND theme = ?';   params.push(theme); }
+  if (emotion) { sql += ' AND emotion = ?'; params.push(emotion); }
+  sql += ' ORDER BY created_at DESC';
+  return db.prepare(sql).all(...params).map(rowToEntry);
 }
 
-// Soft delete: move the entry file into data/trash/ instead of destroying it,
-// so an accidental delete is always recoverable. (See TECH_DESIGN.md.)
-const TRASH_DIR = path.join(DATA_DIR, 'trash');
 function trashEntry(id) {
-  fs.mkdirSync(TRASH_DIR, { recursive: true });
-  const p = entryPath(id);
-  if (!fs.existsSync(p)) return false;
-  const safe = String(id).replace(/[^a-zA-Z0-9._-]/g, '');
-  fs.renameSync(p, path.join(TRASH_DIR, `${safe}.json`));
+  const entry = getEntry(id);
+  if (!entry) return false;
+  db.prepare('DELETE FROM entries WHERE id = ?').run(id);
   return true;
 }
 
-// --- Media (WhatsApp-style single store) -----------------------------------
+function emotionStats() {
+  return db.prepare(`
+    SELECT emotion, COUNT(*) as count, AVG(valence) as valence, AVG(arousal) as arousal
+    FROM entries WHERE emotion IS NOT NULL AND emotion != 'Neutral' AND emotion != ''
+    GROUP BY emotion
+  `).all();
+}
+
+// --- Media -------------------------------------------------------------------
 function mediaPath(filename) {
   const safe = String(filename).replace(/[^a-zA-Z0-9._-]/g, '');
   return path.join(MEDIA_DIR, safe);
@@ -79,19 +121,18 @@ function mediaPath(filename) {
 
 function saveMedia(filename, buffer) {
   const safe = String(filename).replace(/[^a-zA-Z0-9._-]/g, '');
-  fs.writeFileSync(mediaPath(safe), buffer);
+  fs.writeFileSync(path.join(MEDIA_DIR, safe), buffer);
   return safe;
 }
 
 function readMedia(filename) {
   const p = mediaPath(filename);
-  if (!fs.existsSync(p)) return null;
-  return fs.readFileSync(p);
+  return fs.existsSync(p) ? fs.readFileSync(p) : null;
 }
 
 module.exports = {
-  DATA_DIR, ENTRIES_DIR, MEDIA_DIR,
-  ensureDirs, newId,
-  saveEntry, getEntry, listEntries, trashEntry,
+  DATA_DIR, MEDIA_DIR, DB_PATH,
+  newId,
+  saveEntry, getEntry, listEntries, trashEntry, emotionStats,
   saveMedia, readMedia, mediaPath,
 };

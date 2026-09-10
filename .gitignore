@@ -6,3 +6,7 @@ data/media/*
 
 .DS_Store
 node_modules/
+.env
+data/journal.db
+data/journal.db-wal
+data/journal.db-shm

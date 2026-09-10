@@ -1,100 +1,129 @@
 'use strict';
-/*
- * classifier.js — turns entry text into a suggested THEME and EMOTION.
- *
- * This is intentionally simple: keyword matching, no machine learning.
- * It is transparent (you can read exactly why it decided something), free,
- * and instant. It is designed as a "swap point" — see TECH_DESIGN.md §4.
- * Later, the two exported functions can be reimplemented with an LLM or a
- * trained model WITHOUT changing anything else in the app, because the rest
- * of the system only depends on their input (text) and output (a label).
- */
+const OpenAI = require('openai');
 
-// --- THEMES -----------------------------------------------------------------
-// Each theme is a list of trigger words. We count how many appear in the text.
-const THEMES = {
-  Toastmasters:      ['toastmaster', 'speech', 'icebreaker', 'club', 'evaluation', 'table topics', 'podium', 'audience', 'public speaking'],
-  Work:              ['work', 'meeting', 'project', 'deadline', 'boss', 'manager', 'colleague', 'office', 'launch', 'roadmap', 'stakeholder', 'sprint'],
-  'Personal Growth': ['learn', 'goal', 'habit', 'growth', 'improve', 'reflect', 'discipline', 'meditat', 'read a book', 'journal'],
-  Cooking:           ['cook', 'recipe', 'dinner', 'kitchen', 'bake', 'meal', 'ingredient', 'lunch', 'breakfast', 'ate'],
-  Traveling:         ['travel', 'trip', 'flight', 'hotel', 'beach', 'city', 'airport', 'vacation', 'explore', 'journey'],
-  Relationships:     ['friend', 'family', 'partner', 'love', 'date', 'mom', 'dad', 'sister', 'brother', 'relationship', 'wife', 'husband'],
+// Emotion coordinates on the 2-D mood map (valence, arousal)
+const EMOTION_COORDS = {
+  Happy:        { valence:  0.8, arousal:  0.5 },
+  Excited:      { valence:  0.7, arousal:  0.9 },
+  Grateful:     { valence:  0.7, arousal: -0.1 },
+  Calm:         { valence:  0.5, arousal: -0.4 },
+  Confused:     { valence: -0.1, arousal:  0.25 },
+  Anxious:      { valence: -0.5, arousal:  0.7 },
+  Angry:        { valence: -0.6, arousal:  0.8 },
+  Sad:          { valence: -0.7, arousal: -0.3 },
+  Disappointed: { valence: -0.4, arousal: -0.2 },
+  Tired:        { valence: -0.2, arousal: -0.7 },
+  Content:      { valence:  0.5, arousal: -0.4 }, // legacy alias
 };
 
-// --- EMOTIONS ---------------------------------------------------------------
-// Each emotion has trigger words AND a position on the 2-D "mood map"
-// (valence = pleasant/unpleasant, arousal = high/low energy). See §4.
-const EMOTIONS = {
-  Happy:        { words: ['happy', 'great', 'joy', 'glad', 'proud', 'wonderful', 'awesome', 'cheerful'],                     valence:  0.8, arousal:  0.5 },
-  Excited:      { words: ['excited', 'thrilled', 'can\'t wait', 'pumped', 'stoked', 'ecstatic', 'buzzing'],                  valence:  0.7, arousal:  0.9 },
-  Grateful:     { words: ['grateful', 'thankful', 'blessed', 'appreciate', 'lucky'],                                        valence:  0.7, arousal: -0.1 },
-  Calm:         { words: ['calm', 'peaceful', 'content', 'relaxed', 'satisfied', 'fine', 'okay', 'good', 'chill'],           valence:  0.5, arousal: -0.4 },
-  Confused:     { words: ['confused', 'unsure', 'puzzled', 'uncertain', 'torn', 'conflicted', 'mixed up', "don't know"],     valence: -0.1, arousal:  0.25 },
-  Anxious:      { words: ['anxious', 'worried', 'nervous', 'stress', 'overwhelm', 'scared', 'afraid', 'panic', 'tense'],     valence: -0.5, arousal:  0.7 },
-  Angry:        { words: ['angry', 'mad', 'furious', 'annoyed', 'frustrat', 'irritat', 'rage', 'upset'],                     valence: -0.6, arousal:  0.8 },
-  Sad:          { words: ['sad', 'down', 'cry', 'lonely', 'miss', 'hurt', 'lost', 'empty', 'unhappy'],                       valence: -0.7, arousal: -0.3 },
-  Disappointed: { words: ['disappoint', 'let down', 'regret', 'unfortunate', 'expected more', 'failed', 'wish'],             valence: -0.4, arousal: -0.2 },
-  Tired:        { words: ['tired', 'exhausted', 'drained', 'sleepy', 'burnt out', 'burned out', 'weary', 'fatigued'],        valence: -0.2, arousal: -0.7 },
+const VALID_EMOTIONS = Object.keys(EMOTION_COORDS);
+
+const THEMES = [
+  'Toastmasters', 'Work', 'Personal Growth', 'Cooking',
+  'Traveling', 'Relationships', 'Health', 'Finance', 'Hobbies', 'Uncategorized',
+];
+
+// --- LLM-based classification via OpenRouter --------------------------------
+async function classifyWithLLM(text) {
+  if (!process.env.OPENROUTER_API_KEY) return null;
+
+  const client = new OpenAI({
+    baseURL: 'https://openrouter.ai/api/v1',
+    apiKey:  process.env.OPENROUTER_API_KEY,
+    defaultHeaders: { 'HTTP-Referer': 'http://localhost:5050' },
+  });
+
+  const prompt = `You are a journaling assistant. Analyze this journal entry and return ONLY a JSON object — no explanation, no markdown.
+
+Journal entry:
+"""
+${text}
+"""
+
+Return exactly this JSON structure:
+{
+  "theme": "<one of: ${THEMES.join(', ')}>",
+  "themeConfidence": <0.0 to 1.0>,
+  "emotion": "<one of: ${VALID_EMOTIONS.join(', ')}>",
+  "summary": "<one sentence summary of the entry>"
+}`;
+
+  try {
+    const response = await client.chat.completions.create({
+      model: 'openai/gpt-5.6-luna',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const raw    = response.choices[0].message.content.trim();
+    const parsed = JSON.parse(raw);
+
+    const theme   = THEMES.includes(parsed.theme) ? parsed.theme : 'Uncategorized';
+    const emotion = VALID_EMOTIONS.includes(parsed.emotion) ? parsed.emotion : '';
+    return {
+      theme,
+      themeConfidence: Number(parsed.themeConfidence) || 0.5,
+      emotion,
+      emotionScores: emotion ? EMOTION_COORDS[emotion] : null,
+      summary: parsed.summary || '',
+    };
+  } catch {
+    return null; // fall through to keyword fallback
+  }
+}
+
+// --- Keyword fallback (used when Claude API key is absent or call fails) ----
+const KEYWORD_THEMES = {
+  Toastmasters:      ['toastmaster', 'speech', 'icebreaker', 'club', 'evaluation', 'public speaking'],
+  Work:              ['work', 'meeting', 'project', 'deadline', 'boss', 'office', 'sprint'],
+  'Personal Growth': ['learn', 'goal', 'habit', 'growth', 'improve', 'reflect', 'meditat'],
+  Cooking:           ['cook', 'recipe', 'dinner', 'kitchen', 'bake', 'meal'],
+  Traveling:         ['travel', 'trip', 'flight', 'hotel', 'beach', 'airport', 'vacation'],
+  Relationships:     ['friend', 'family', 'partner', 'love', 'date', 'mom', 'dad'],
 };
 
-// Count how many trigger words from `list` appear in the lowercased text.
-function countHits(text, list) {
-  let hits = 0;
-  for (const word of list) {
-    if (text.includes(word)) hits++;
-  }
-  return hits;
-}
+const KEYWORD_EMOTIONS = {
+  Happy:        ['happy', 'great', 'joy', 'glad', 'proud', 'wonderful', 'awesome'],
+  Excited:      ['excited', 'thrilled', 'pumped', 'ecstatic'],
+  Grateful:     ['grateful', 'thankful', 'blessed', 'appreciate'],
+  Calm:         ['calm', 'peaceful', 'relaxed', 'satisfied', 'content'],
+  Confused:     ['confused', 'unsure', 'uncertain', 'torn'],
+  Anxious:      ['anxious', 'worried', 'nervous', 'stress', 'overwhelm', 'scared'],
+  Angry:        ['angry', 'mad', 'furious', 'frustrat', 'irritat'],
+  Sad:          ['sad', 'down', 'cry', 'lonely', 'hurt', 'unhappy'],
+  Disappointed: ['disappoint', 'let down', 'regret', 'failed'],
+  Tired:        ['tired', 'exhausted', 'drained', 'burnt out'],
+};
 
-/**
- * classifyTheme(text) -> { theme, confidence }
- * Picks the theme with the most keyword hits. Confidence is a rough 0..1
- * signal of how sure we are (share of hits going to the winner).
- */
-function classifyTheme(text) {
+function keywordClassify(text) {
   const t = (text || '').toLowerCase();
-  let best = { theme: 'Uncategorized', hits: 0 };
-  let totalHits = 0;
 
-  for (const [theme, words] of Object.entries(THEMES)) {
-    const hits = countHits(t, words);
-    totalHits += hits;
-    if (hits > best.hits) best = { theme, hits };
+  let bestTheme = { theme: 'Uncategorized', hits: 0 };
+  let totalThemeHits = 0;
+  for (const [theme, words] of Object.entries(KEYWORD_THEMES)) {
+    const hits = words.filter(w => t.includes(w)).length;
+    totalThemeHits += hits;
+    if (hits > bestTheme.hits) bestTheme = { theme, hits };
   }
 
-  const confidence = totalHits === 0 ? 0 : Math.min(1, best.hits / totalHits);
-  return { theme: best.theme, confidence: Number(confidence.toFixed(2)) };
-}
-
-/**
- * classifyEmotion(text) -> { emotion, scores:{valence, arousal} | null }
- * Picks the emotion with the most keyword hits and returns its mood-map
- * coordinates (used by the visualization). If nothing matches (e.g. a
- * photo-only entry, or a voice note the browser couldn't transcribe), we
- * return an EMPTY emotion — the entry simply has no feeling attached until
- * the user sets one from the Entries tab.
- */
-function classifyEmotion(text) {
-  const t = (text || '').toLowerCase();
-  let best = { emotion: '', hits: 0, valence: 0, arousal: 0 };
-
-  for (const [emotion, def] of Object.entries(EMOTIONS)) {
-    const hits = countHits(t, def.words);
-    if (hits > best.hits) best = { emotion, hits, valence: def.valence, arousal: def.arousal };
+  let bestEmotion = { emotion: '', hits: 0 };
+  for (const [emotion, words] of Object.entries(KEYWORD_EMOTIONS)) {
+    const hits = words.filter(w => t.includes(w)).length;
+    if (hits > bestEmotion.hits) bestEmotion = { emotion, hits };
   }
 
   return {
-    emotion: best.emotion,
-    scores: best.emotion ? { valence: best.valence, arousal: best.arousal } : null,
+    theme: bestTheme.theme,
+    themeConfidence: totalThemeHits === 0 ? 0 : Number(Math.min(1, bestTheme.hits / totalThemeHits).toFixed(2)),
+    emotion: bestEmotion.emotion,
+    emotionScores: bestEmotion.emotion ? EMOTION_COORDS[bestEmotion.emotion] : null,
+    summary: '',
   };
 }
 
-// The canonical coordinates, exported so the stats endpoint can place ANY
-// emotion on the map (even ones with zero entries yet, if we wanted to).
-const EMOTION_COORDS = Object.fromEntries(
-  Object.entries(EMOTIONS).map(([name, d]) => [name, { valence: d.valence, arousal: d.arousal }])
-);
-// Legacy alias: older entries may still use "Content" (now "Calm").
-EMOTION_COORDS.Content = EMOTION_COORDS.Calm;
+// --- Public API -------------------------------------------------------------
+async function classify(text) {
+  const llm = await classifyWithLLM(text);
+  return llm || keywordClassify(text);
+}
 
-module.exports = { classifyTheme, classifyEmotion, EMOTION_COORDS, THEMES, EMOTIONS };
+module.exports = { classify, EMOTION_COORDS, THEMES, VALID_EMOTIONS };
