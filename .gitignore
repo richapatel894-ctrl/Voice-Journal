@@ -10,3 +10,11 @@ node_modules/
 data/journal.db
 data/journal.db-wal
 data/journal.db-shm
+
+# iOS — the Xcode project + Info.plist are generated from ios/project.yml
+# (`xcodegen generate`)
+ios/*.xcodeproj
+ios/VoiceJournal/Info.plist
+ios/.build/
+ios/DerivedData/
+xcuserdata/
