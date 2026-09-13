@@ -111,11 +111,20 @@ app.delete('/api/entries/:id', (req, res) => {
   res.json({ deleted: req.params.id });
 });
 
-// POST /api/entries/:id/media — attach a file
+// POST /api/entries/:id/media — attach a file, or a link (JSON body { url })
 app.post('/api/entries/:id/media', upload.single('file'), async (req, res) => {
   const entry = storage.getEntry(req.params.id);
   if (!entry) return res.status(404).json({ error: 'not found' });
-  if (!req.file) return res.status(400).json({ error: 'no file' });
+
+  if (!req.file) {
+    const url = req.body && req.body.url;
+    if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+      return res.status(400).json({ error: 'no file, and no valid url' });
+    }
+    entry.media.push(url);
+    storage.saveEntry(entry);
+    return res.status(201).json({ url });
+  }
 
   const filename = `${req.params.id}-${req.file.originalname}`;
   const saved    = storage.saveMedia(filename, req.file.buffer);
