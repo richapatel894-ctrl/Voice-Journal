@@ -77,7 +77,7 @@ Four native tabs: **Home**, **Entries**, **Insights**, **Settings**. Media (atta
 - **Emotion filter** is a native menu. **Sort** is a native menu (newest, oldest).
 - **Search** covers text, theme and emotion.
 - Tapping an entry pushes the **Entry detail**. Edit and delete are native swipe actions and a context menu.
-- Tapping a day in the Insights calendar, or an emotion bubble, opens Entries with that filter applied. The calendar lives in Insights (section 8.6); Entries has no separate calendar screen and no separate Collections page.
+- Tapping a day in the Insights heatmap, or an emotion bubble, opens Entries with that filter applied. The month calendar lives in Insights (section 8.6); Entries has no separate calendar screen and no separate Collections page.
 - Empty state: "No entries yet. Go record one!"
 
 ### 8.5 Entry detail
@@ -85,12 +85,15 @@ Four native tabs: **Home**, **Entries**, **Insights**, **Settings**. Media (atta
 - Tags (themes and up to three emotions) shown by name and editable; attachments; created timestamp; edit and delete.
 
 ### 8.6 Insights
-- **Period picker:** 3M / 6M / 12M / Year / All. It drives the emotion map, snapshot, stat tiles and mood-over-time. The calendar (below) is month-scoped and has its own month control.
-- **Emotion map:** valence and arousal bubbles, sized by count. Tapping a bubble opens Entries filtered to that emotion.
-- **Snapshot:** entry count, most-written theme, most-felt emotion, plus an actionable card (what, why, how) for the selected emotion.
-- **Stat tiles:** current streak, record streak, total entries, days journaling.
-- **Mood over time:** an area chart of valence per entry over the selected period.
-- **Journaling calendar:** a month view that shows which days you journaled, with a summary such as "14 of 30 days journaled". Days with entries are marked, and the shade reflects how many entries that day has. Previous and next controls move between months, starting on the current month. Tapping a day opens Entries for that day. This replaces the old all-time heatmap, which ignored the period picker.
+One scrollable page. Sections, top to bottom:
+1. **Period picker:** 3M / 6M / 12M / Year / All. It drives the emotion map, snapshot, stat tiles, mood-over-time and heatmap.
+2. **Emotion map:** valence and arousal bubbles, sized by count. Tapping a bubble opens Entries filtered to that emotion.
+3. **Snapshot:** entry count, most-written theme, most-felt emotion, plus an actionable card (what, why, how) for the selected emotion.
+4. **Stat tiles:** current streak, record streak, total entries, days journaling.
+5. **Mood over time:** an area chart of valence per entry over the selected period.
+6. **Journaling heatmap:** frequency by day over the selected period (the SwiftUI heatmap ignored the period picker, which is fixed here). Tapping a day opens Entries for that day.
+7. **Month calendar:** a snapshot of which days of a month you added an entry, with a summary such as "14 of 30 days journaled". Days with entries are marked. Previous and next controls move between months, starting on the current month. It is display-only and is in addition to the heatmap, not a replacement for it.
+
 - **Later (not v1):** a written summary layer (what you've been feeling, writing about, and what's top of mind), a frequent-words view, and a weekly mood view. The written summary needs an LLM, so it follows the architecture decision in section 11.
 - Filters from the Entries chip strip do not carry over to Insights in v1. The strip's filter state should be one shared value so Insights can reuse it later.
 
@@ -199,7 +202,7 @@ The app is "done" for v1 when, on my iPhone, I can:
 3. Correct a tag and see it stick, and see it reflected in the chip strip counts.
 4. Filter Entries with two chips and the emotion menu and get the expected set.
 5. Replay a voice entry's audio from the Entry detail.
-6. Open Insights, pick a period, tap an emotion bubble or a calendar day, and land on the matching entries; and see how many days of the month I journaled.
+6. Open Insights, pick a period, tap an emotion bubble or a heatmap day, and land on the matching entries; and see in the month calendar which days I journaled.
 7. Get a daily reminder at the time I set.
 8. Export everything, close and reopen the app, and find all my data still there.
 
@@ -222,14 +225,14 @@ The app is "done" for v1 when, on my iPhone, I can:
 | 2026-09-20 | Streak row with weekday dots, current and record streak, and a light celebration on first save. |
 | 2026-09-20 | Entries: month and day headers, plus a horizontal tag chip strip (multi-select, OR within tags, AND with emotion). No separate Collections page. |
 | 2026-09-20 | Tags are open-ended (about 3 per entry, seeded from the 10-theme catalog). |
-| 2026-09-20 | Insights v1: parity, stat tiles, mood-over-time, and a month calendar (see the calendar decision below). Written summary, frequent words and weekly mood come later. |
+| 2026-09-20 | Insights v1: parity (emotion map, snapshot, heatmap), stat tiles, mood-over-time, and a month calendar. Written summary, frequent words and weekly mood come later. Written summary, frequent words and weekly mood come later. |
 | 2026-09-20 | Filters do not carry over to Insights in v1. |
 | 2026-09-20 | No onboarding carousel; permissions in context; reminder offered after the first entry. |
 | 2026-09-20 | Settings includes Data export. |
 | 2026-09-20 | Retire the SwiftUI app from the start, with no cutover gate. The web prototype is no longer developed; its removal is decided with the architecture pass. |
 | 2026-09-20 | Emotions are capped at three per entry, for auto-tagging and for manual edits. |
 | 2026-09-20 | Android is a non-goal; the streak day rolls over at midnight. |
-| 2026-09-20 | The calendar view lives in Insights as a month view showing how many days of the month were journaled, replacing the all-time heatmap. |
+| 2026-09-20 | Insights keeps the heatmap and adds a display-only month calendar showing which days of the month have an entry. The heatmap now respects the period picker. |
 | superseded | The old "PWA vs backend vs Capacitor" question is resolved: a native Expo app. The "backend appetite" question is now the section 11 architecture pass. |
 
 ## 17. Open questions
