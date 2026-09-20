@@ -16,7 +16,7 @@ Journaling works best when it has the least friction. Typing is friction; talkin
 
 The second problem is consistency. The core pain this app solves is **forgetting to journal**, so the app has to make coming back every day feel warm and take seconds.
 
-**Goals:** make speaking a thought the fastest thing the app does, keep the data private and on-device, and turn months of entries into insight (themes and emotional patterns) without manual tagging.
+**Goals:** make speaking a thought the fastest thing the app does, keep the data on my own device with no accounts, and turn months of entries into insight (themes, emotional patterns and a written summary) without manual tagging. The trade-off is explicit: entry text is sent to an LLM provider to derive tags and summaries (section 9).
 
 ## 3. Who it's for
 
@@ -86,14 +86,15 @@ Four native tabs: **Home**, **Entries**, **Insights**, **Settings**. Media (atta
 
 ### 8.6 Insights
 One scrollable page. Sections, top to bottom:
-1. **Period picker:** 3M / 6M / 12M / Year / All. It drives the emotion map, snapshot, stat tiles, mood-over-time and heatmap.
-2. **Emotion map:** valence and arousal bubbles, sized by count. Tapping a bubble opens Entries filtered to that emotion.
-3. **Snapshot:** entry count, most-written theme, most-felt emotion, plus an actionable card (what, why, how) for the selected emotion.
-4. **Stat tiles:** current streak, record streak, total entries, days journaling.
-5. **Mood over time:** an area chart of valence per entry over the selected period.
-6. **Journaling heatmap:** frequency by day over the selected period (the SwiftUI heatmap ignored the period picker, which is fixed here). Tapping a day opens Entries for that day.
+1. **Period picker:** 3M / 6M / 12M / Year / All. It drives the written summary, emotion map, snapshot, stat tiles, mood-over-time and heatmap.
+2. **Written summary:** an LLM-written summary of the selected period: what you've been feeling, what you've been writing about, and what has been top of mind. It is generated from the entries, cached on the phone, and regenerated on request or when new entries arrive. Offline, the last summary is shown with its date.
+3. **Emotion map:** valence and arousal bubbles, sized by count. Tapping a bubble opens Entries filtered to that emotion.
+4. **Snapshot:** entry count, most-written theme, most-felt emotion, plus an actionable card (what, why, how) for the selected emotion.
+5. **Stat tiles:** current streak, record streak, total entries, days journaling.
+6. **Mood over time:** an area chart of valence per entry over the selected period.
+7. **Journaling heatmap:** frequency by day over the selected period (the SwiftUI heatmap ignored the period picker, which is fixed here). Tapping a day opens Entries for that day.
 
-- **Later (not v1):** a written summary layer (what you've been feeling, writing about, and what's top of mind), a frequent-words view, and a weekly mood view. The written summary needs an LLM, so it follows the architecture decision in section 11.
+- **Later (not v1):** a frequent-words view and a weekly mood view.
 - Filters from the Entries chip strip do not carry over to Insights in v1. The strip's filter state should be one shared value so Insights can reuse it later.
 
 ### 8.7 Settings
@@ -119,6 +120,7 @@ One scrollable page. Sections, top to bottom:
 - **Themes are open-ended tags.** An entry has up to about 3 tags. Auto-tagging suggests them, seeded from the original 10-theme catalog so names stay consistent. The user can add, rename or remove tags, and these tags feed the Entries chip strip.
 - **Emotions are one-to-many, with a maximum of three per entry.** An entry can carry up to three emotions (for example happy, anxious and tired) and is filed under all of them. Auto-tagging never assigns more than three, and when editing you can tap at most three emotions; a fourth tap is disabled until one is removed. The first tag is the "primary" emotion for tight UI spots (a card dot, a thumbnail); collections and insights treat every tag as fully valid.
 - **The emotion map aggregates by full count:** each tag counts fully toward its emotion, not split-weighted, because it reads more intuitively as frequency.
+- **Tags and emotions are LLM-derived from v1, not rule-based.** An LLM reads the entry text and returns the tags (open-ended, seeded from the theme catalog for consistency) and up to three emotions chosen from the emotion catalog, whose entries define the valence and arousal coordinates used by the map. There are no keyword rules. Tagging runs after the entry is saved, so it never blocks capture: an entry saved offline shows no tags until the LLM call succeeds, and tagging is retried automatically when the connection returns.
 - **Silent auto-tag, editable later.** There is no confirm step after save. Corrections happen in the Composer or on the Entry detail. Corrections are recorded, because they quietly build a labeled dataset for a better tagger later.
 - Entries are the single source of truth. Theme and emotion tags are attributes of an entry, never folders an entry is moved into.
 
@@ -132,6 +134,8 @@ This section states *what* data the UX needs. It deliberately does not choose th
 | **Tag (theme)** | name, per-entry assignment, source (auto or user), confidence | Open-ended. Up to about 3 per entry. Entry counts per tag must be cheap to compute for the chip strip. |
 | **Emotion assignment** | emotion name, per-entry, order (first is primary), valence, arousal | Up to 3 per entry. Valence and arousal drive the emotion map and the mood-over-time chart. |
 | **Audio recording** | file, duration, waveform data (for the player card), owning entry | Voice entries keep their audio. The SwiftUI app discarded it. |
+| **Tagging status** | per entry: pending, done, failed; the LLM model used | Lets untagged entries be retried and lets tags be regenerated if the model changes. |
+| **Period summary** | period, generated text, generated-at time | The cached written summary shown in Insights. |
 | **Attachment** | type (photo, file, link), file or URL, owning entry | Photos, files and links, browsable in Settings. |
 | **Streak inputs** | the set of days that have at least one entry | Derived from entries, not stored separately. Timezone-aware. |
 | **Settings** | reminder on/off, time, weekdays; appearance | Small key-value data. |
@@ -140,7 +144,7 @@ This section states *what* data the UX needs. It deliberately does not choose th
 1. **Saving never blocks on the network** (design principle 3). The entry and its audio are durable on the phone before any transcription or tagging happens.
 2. **Filter and count queries must be fast:** by tag (OR), by emotion (AND), by day, by text, and by period, over thousands of entries.
 3. **Export must be possible** (JSON plus audio files).
-4. Data stays private: nothing leaves the device unless the user opts in to a feature that needs it.
+4. Privacy is explicit: entries and audio are stored on the device, but entry text is sent to an LLM provider for tagging and summaries, and audio or transcripts may go to a transcription service depending on the section 11 decision.
 
 ## 11. Architecture decisions (deferred, with timing)
 
@@ -150,7 +154,7 @@ The UX decisions above fix the *requirements* on data. The following *technology
 |---|---|---|
 | **Where entries live** | On-device SQLite (`expo-sqlite`) with audio and media as files on disk and only their paths in the database (recommended direction); or the existing Express and `better-sqlite3` backend | Direction already set: the phone must work alone (section 5, principle 3). |
 | **Transcription** | On-device speech recognition; Whisper on a Mac server or cloud when reachable | Drives the "Transcribing..." state length and the failure and retry path. |
-| **Auto-tagging and emotion** | Keyword rules on-device; an LLM API or server call when reachable | Drives tag quality, and the written summary in Insights. |
+| **LLM tagging, emotions and summary** | **Decided: LLM-derived, no rule-based tagging.** Still open: which provider and model (the current backend calls OpenRouter with `openai/gpt-5.6-luna`), and *where the call runs*: directly from the phone with a user-supplied key kept in the iOS Keychain, through the Mac server, or through a small proxy that holds the key | The key currently lives in the Mac server's `.env`, not in the app. A key inside the phone app can be extracted, and a server on the Mac is unreachable away from home, so this choice decides tag latency, offline behavior and key safety. |
 | **Backup or sync** | Export only; iCloud or another sync later | Export in Settings is required either way. |
 | **Server's role** | Retire it; keep it as an optional booster (Whisper, LLM tagging); or keep it as a sync target | Decides whether the Advanced settings section exists. |
 
@@ -170,6 +174,7 @@ The UX decisions above fix the *requirements* on data. The following *technology
 | U10 | see my streak and this week at a glance | I feel the pull to come back | Home shows weekday dots, the current streak and the record streak. |
 | U11 | get a reminder at a time I choose | I stop forgetting to journal | Settings sets day and time; a local notification fires; it is offered after the first entry. |
 | U12 | export my data | a lost phone does not lose my journal | Settings, Data exports JSON plus audio via the share sheet. |
+| U13 | read a written summary of a period | I see what I've been feeling and writing about without reading every entry | Insights shows an LLM-written summary for the selected period, cached and regenerable. |
 
 ## 13. Build phases
 
@@ -188,7 +193,7 @@ The UX decisions above fix the *requirements* on data. The following *technology
 - No login, accounts or sync across devices in v1.
 - No sharing or social features.
 - No Android, and no iPad-specific layout.
-- No perfect AI categorization: "good enough and easy to correct" beats "perfect".
+- No perfect AI categorization: "good enough and easy to correct" beats "perfect". Tags are LLM-derived, so they can be wrong; editing is the safety net.
 - Hand-made cross-theme collections (for example a "Japan trip" set). Tag filters cover the need; saved filters could come later.
 - No encryption at rest in v1 (a known gap).
 - No full-screen streak celebration, no mood picker at capture, no welcome carousel.
@@ -202,8 +207,9 @@ The app is "done" for v1 when, on my iPhone, I can:
 4. Filter Entries with two chips and the emotion menu and get the expected set.
 5. Replay a voice entry's audio from the Entry detail.
 6. Open Insights, pick a period, tap an emotion bubble or a heatmap day, and land on the matching entries.
-7. Get a daily reminder at the time I set.
-8. Export everything, close and reopen the app, and find all my data still there.
+7. Read a written summary in Insights for the selected period.
+8. Get a daily reminder at the time I set.
+9. Export everything, close and reopen the app, and find all my data still there.
 
 ## 16. Decision log
 
@@ -215,6 +221,7 @@ The app is "done" for v1 when, on my iPhone, I can:
 | 2026-09-18 | Build the client with Expo; use real native components (`NativeTabs`, `@expo/ui`). Expo fully replaces the SwiftUI app. |
 | 2026-09-20 | Home hero is the big Record button, with greeting and streak above it. |
 | 2026-09-20 | Silent auto-tag with a toast on save; tags are editable later (no confirm step). |
+| 2026-09-20 | Tags and emotions are LLM-derived from v1 with no rule-based tagging, and the written summary is in v1 (moved out of "later"). Where the LLM is called from is decided in the architecture pass. |
 | 2026-09-20 | Charts are custom-drawn inside native chrome (`@expo/ui` has no Swift Charts in SDK 57). |
 | 2026-09-20 | The plan lives in this PRD; the separate requirements doc is retired. |
 | 2026-09-20 | The phone must work without a server; saving never blocks on network. Storage technology is decided in a separate architecture pass (section 11). |
@@ -242,8 +249,8 @@ The app is "done" for v1 when, on my iPhone, I can:
 
 ## 18. Roadmap beyond v1
 
-- **Written summary layer**, frequent words and weekly mood in Insights.
+- Frequent words and weekly mood in Insights.
 - **Theme-scoped Insights** (the emotion map for one tag), reusing the shared filter state.
 - **Saved filters** as lightweight collections.
-- **Better AI:** on-device or local transcription, LLM-based categorization, real text embeddings for the emotion map.
+- **Better AI:** on-device or local transcription, and real text embeddings for the emotion map.
 - **Publish:** App Store provisioning, privacy nutrition labels, TestFlight, the review process.
