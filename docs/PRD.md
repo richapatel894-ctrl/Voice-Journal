@@ -153,7 +153,7 @@ This section states *what* data the UX needs. It deliberately does not choose th
 1. **Saving never blocks on the network** (design principle 3). The entry and its audio are durable on the phone before any transcription or tagging happens.
 2. **Filter and count queries must be fast:** by tag (OR), by emotion (AND), by day, by text, and by period, over thousands of entries.
 3. **All entry data and media live in backup-eligible app storage**, so the iPhone backup covers them (to verify while building).
-4. Privacy is explicit: entries and audio are stored on the device, but entry text is sent to an LLM provider for tagging and summaries, and audio or transcripts may go to a transcription service depending on the section 11 decision.
+4. Privacy is explicit: entries and audio are stored on the device, but entry text is sent to an LLM provider for tagging and summaries, and the audio is uploaded to OpenRouter for transcription.
 
 ## 11. Architecture decisions
 
@@ -162,9 +162,9 @@ The UX decisions above fixed the *requirements* on data (section 10). This secti
 | Decision | Options | UX consequence |
 |---|---|---|
 | **Where entries live** | **Decided: on-device SQLite (`expo-sqlite`).** Audio and photos are files in the app's storage; the database holds only their paths | The phone works alone (section 5, principle 3). SQLite serves the tag, emotion, day, period and text-search queries. |
-| **Transcription** | **Open, to revisit.** Hosted Whisper needs an OpenAI key, and only an OpenRouter key exists. Options: on-device speech recognition (recommended: no key, works offline, audio stays on the phone; verify long recordings) or an audio-capable model through OpenRouter (unverified) | Drives the "Transcribing..." state and the failure and retry path. |
+| **Transcription** | **Decided: an audio-capable model through OpenRouter, using the same key as tagging, with a verbatim-transcript prompt.** OpenRouter has no Whisper-style endpoint, and `openai/gpt-5.6-luna` does not accept audio, so transcription uses a different model on the same key; the Google Gemini Flash family accepts audio and is the starting choice. The exact model is picked at build time from OpenRouter's audio-input list | Audio is uploaded to OpenRouter and the model provider, and needs a connection. It drives the "Transcribing..." state and the failure and retry path. On-device recognition is not used. |
 | **LLM tagging, emotions and summary** | **Decided: LLM-derived, no rule-based tagging. The phone calls OpenRouter directly (no Mac server, no proxy).** The starting model is `openai/gpt-5.6-luna`, as in the current backend; prompt design and result validation are left to implementation | Works on any network. Saving is instant and tagging happens in the background, retried when offline. The emotion map and heatmap are computed on the phone from the stored tags; only tagging and the written summary call the LLM. |
-| **API keys** | **Decided direction, to revisit: keys are read at build time from a git-ignored `mobile/.env.local` (`EXPO_PUBLIC_OPENROUTER_API_KEY`), with no in-app screen.** Only an OpenRouter key exists today | A key inside the app can be extracted, which is acceptable for a personal single-user build. Before any App Store release the calls must move behind a proxy. Changing a key means a rebuild. |
+| **API keys** | **Decided: one OpenRouter key, read at build time from a git-ignored `mobile/.env.local` (`EXPO_PUBLIC_OPENROUTER_API_KEY`), with no in-app screen.** It covers transcription, tagging, emotions and the written summary | A key inside the app can be extracted, which is acceptable for a personal single-user build. Before any App Store release the calls must move behind a proxy. Changing the key means a rebuild. |
 | **Backup or sync** | **Decided: the automatic iPhone backup only. No export in v1 (moved to v2) and no sync between devices.** To verify while building: that the app's database, audio and media files are included in device backups | Trade-off: a lost phone without a backup means a lost journal. |
 | **When iOS suspends the app** | **Decided: after a save, request a short extra background window. Any unfinished transcription or tagging resumes the next time the app opens.** Entries keep their pending state until then | No background-upload system in v1. |
 | **Existing entries** | **Decided: fresh start.** The entries in `data/journal.db` are not imported | The old `data/` folder stays only as a local archive. |
@@ -236,7 +236,7 @@ The app is "done" for v1 when, on my iPhone, I can:
 | 2026-09-20 | Silent auto-tag with a toast on save; tags are editable later (no confirm step). |
 | 2026-09-20 | Tags and emotions are LLM-derived from v1 with no rule-based tagging, and the written summary is in v1 (moved out of "later"). Where the LLM is called from is decided in the architecture pass. |
 | 2026-09-20 | The phone calls OpenRouter directly for tagging, emotions and the written summary. The Mac server is not part of the app. |
-| 2026-09-20 | Keys are read at build time from a git-ignored `mobile/.env.local`, with no in-app screen and no missing-key banner. Only an OpenRouter key exists, so the transcription approach is open (section 11). |
+| 2026-09-20 | One OpenRouter key does everything: transcription through an audio-capable model (Gemini Flash family), tagging, emotions and the written summary through `openai/gpt-5.6-luna`. It is read at build time from a git-ignored `mobile/.env.local`, with no in-app screen and no missing-key banner. On-device transcription is not used. |
 | 2026-09-20 | Architecture pass: on-device SQLite with audio and photos as files; the iPhone backup only, with no export and no sync; a short background window after save with resume on next open; fresh start with no import of old entries. |
 | 2026-09-20 | Charts are custom-drawn inside native chrome (`@expo/ui` has no Swift Charts in SDK 57). |
 | 2026-09-20 | The plan lives in this PRD; the separate requirements doc is retired. |
@@ -260,7 +260,7 @@ The app is "done" for v1 when, on my iPhone, I can:
 
 ## 17. Open questions
 
-- **API keys and transcription, to revisit:** only an OpenRouter key exists. Whether transcription is on-device (recommended) or through OpenRouter, and how keys are supplied before any App Store release.
+- The exact OpenRouter models for transcription and for tagging (the starting points are a Gemini Flash model and `openai/gpt-5.6-luna`), chosen at build time. How keys are supplied before any App Store release.
 - The exact limit on theme tags per entry (currently "about 3") and normalization rules (for example merging near-duplicate tags).
 - Removing the retired `ios/`, `backend/` and `frontend/` code from the repo, and updating the root `README.md`, `package.json` and `docs/TECH_DESIGN.md`, which still describe the old prototype.
 
