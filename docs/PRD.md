@@ -102,7 +102,7 @@ One scrollable page. Sections, top to bottom:
 - **Appearance:** system, light or dark.
 - **Media:** a grid of all attached photos, files and links.
 - **Data:** export all entries as JSON plus audio through the iOS share sheet. This is the backup story for a phone-only store.
-- **AI:** the API key(s) for the LLM (and for transcription, if a hosted service is used), entered by you and stored in the iOS Keychain, never bundled into the app. Includes a "Test connection" button and a count of entries still waiting for transcription or tagging.
+- **AI:** two API keys, entered by you and stored in the iOS Keychain, never bundled into the app: an **OpenAI key used only for voice transcription**, and an **OpenRouter key used for everything else the LLM does** (tags, emotions and the written summary). Includes a "Test connection" button and a count of entries still waiting for transcription or tagging. There is no in-app banner or setup screen for a missing key.
 - **About.**
 
 ### 8.8 Onboarding and permissions
@@ -153,8 +153,8 @@ The UX decisions above fix the *requirements* on data. The following *technology
 | Decision | Options | UX consequence |
 |---|---|---|
 | **Where entries live** | On-device SQLite (`expo-sqlite`) with audio and media as files on disk and only their paths in the database (recommended direction); or the existing Express and `better-sqlite3` backend | Direction already set: the phone must work alone (section 5, principle 3). |
-| **Transcription** | On-device speech recognition; Whisper on a Mac server or cloud when reachable | Drives the "Transcribing..." state length and the failure and retry path. |
-| **LLM tagging, emotions and summary** | **Decided: the phone calls the LLM directly (no Mac server, no proxy), with a user-entered key stored in the iOS Keychain.** Still open: which provider and model (the current backend calls OpenRouter with `openai/gpt-5.6-luna`) and how prompts and results are validated | Works on any network. Saving is instant and tagging happens in the background, retried when offline. A key on the phone can be extracted if someone gets your unlocked phone; acceptable for a single-user app. |
+| **Transcription** | **Decided: OpenAI's hosted transcription (Whisper), called from the phone with the OpenAI key.** On-device recognition can be added later for offline use | Audio is uploaded to OpenAI. Drives the "Transcribing..." state and the failure and retry path. |
+| **LLM tagging, emotions and summary** | **Decided: LLM-derived, no rule-based tagging. The phone calls OpenRouter directly (no Mac server, no proxy) with a user-entered key in the iOS Keychain.** The starting model is `openai/gpt-5.6-luna`, as in the current backend; prompt design and result validation are left to implementation | Works on any network. Saving is instant and tagging happens in the background, retried when offline. A key on the phone can be extracted if someone gets your unlocked phone; acceptable for a single-user app. The emotion map and heatmap are computed on the phone from the stored tags; only tagging and the written summary call the LLM. |
 | **Backup or sync** | Export only; iCloud or another sync later | Export in Settings is required either way. |
 | **Server's role** | **Decided: none.** The app does not use the Express backend. Still open: whether to delete `backend/`, `frontend/` and `ios/` from the repo now or later | The Settings "server URL" is gone. |
 
@@ -223,6 +223,7 @@ The app is "done" for v1 when, on my iPhone, I can:
 | 2026-09-20 | Silent auto-tag with a toast on save; tags are editable later (no confirm step). |
 | 2026-09-20 | Tags and emotions are LLM-derived from v1 with no rule-based tagging, and the written summary is in v1 (moved out of "later"). Where the LLM is called from is decided in the architecture pass. |
 | 2026-09-20 | The phone calls the LLM directly with a user-entered key in the iOS Keychain (option A). The Mac server is not part of the app; the Settings "server" section becomes an "AI" section. |
+| 2026-09-20 | Two keys with separate jobs: OpenAI only for transcription, OpenRouter for tagging, emotions and the written summary. No banner for a missing key; the assistant reports setup problems to the user instead. |
 | 2026-09-20 | Charts are custom-drawn inside native chrome (`@expo/ui` has no Swift Charts in SDK 57). |
 | 2026-09-20 | The plan lives in this PRD; the separate requirements doc is retired. |
 | 2026-09-20 | The phone must work without a server; saving never blocks on network. Storage technology is decided in a separate architecture pass (section 11). |
