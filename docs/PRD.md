@@ -146,17 +146,19 @@ This section states *what* data the UX needs. It deliberately does not choose th
 3. **Export must be possible** (JSON plus audio files).
 4. Privacy is explicit: entries and audio are stored on the device, but entry text is sent to an LLM provider for tagging and summaries, and audio or transcripts may go to a transcription service depending on the section 11 decision.
 
-## 11. Architecture decisions (deferred, with timing)
+## 11. Architecture decisions
 
-The UX decisions above fix the *requirements* on data. The following *technology* choices are not made yet. **They are decided in a dedicated architecture pass right after this UX plan is approved, and before any code is written for build step 1 (the data layer, section 13).** The UX plan does not need to wait for them, and they do not need to be made earlier.
+The UX decisions above fixed the *requirements* on data (section 10). This section records the *technology* choices made in the architecture pass on 2026-09-20. The pass is complete; build step 1 (the data layer, section 13) can start.
 
 | Decision | Options | UX consequence |
 |---|---|---|
-| **Where entries live** | On-device SQLite (`expo-sqlite`) with audio and media as files on disk and only their paths in the database (recommended direction); or the existing Express and `better-sqlite3` backend | Direction already set: the phone must work alone (section 5, principle 3). |
+| **Where entries live** | **Decided: on-device SQLite (`expo-sqlite`).** Audio and photos are files in the app's storage; the database holds only their paths | The phone works alone (section 5, principle 3). SQLite serves the tag, emotion, day, period and text-search queries. |
 | **Transcription** | **Decided: OpenAI's hosted transcription (Whisper), called from the phone with the OpenAI key.** On-device recognition can be added later for offline use | Audio is uploaded to OpenAI. Drives the "Transcribing..." state and the failure and retry path. |
 | **LLM tagging, emotions and summary** | **Decided: LLM-derived, no rule-based tagging. The phone calls OpenRouter directly (no Mac server, no proxy) with a user-entered key in the iOS Keychain.** The starting model is `openai/gpt-5.6-luna`, as in the current backend; prompt design and result validation are left to implementation | Works on any network. Saving is instant and tagging happens in the background, retried when offline. A key on the phone can be extracted if someone gets your unlocked phone; acceptable for a single-user app. The emotion map and heatmap are computed on the phone from the stored tags; only tagging and the written summary call the LLM. |
-| **Backup or sync** | Export only; iCloud or another sync later | Export in Settings is required either way. |
-| **Server's role** | **Decided: none.** The app does not use the Express backend. Still open: whether to delete `backend/`, `frontend/` and `ios/` from the repo now or later | The Settings "server URL" is gone. |
+| **Backup or sync** | **Decided: Settings export (JSON plus audio) plus the automatic iPhone backup; no sync between devices.** To verify while building step 5: that the app's audio and database files are included in device backups | Export in Settings is required. Sync stays a non-goal. |
+| **When iOS suspends the app** | **Decided: after a save, request a short extra background window. Any unfinished transcription or tagging resumes the next time the app opens.** Entries keep their pending state until then | No background-upload system in v1. |
+| **Existing entries** | **Decided: fresh start.** The entries in `data/journal.db` are not imported | The old `data/` folder stays only as a local archive. |
+| **Server's role** | **Decided: none.** The app does not use the Express backend, and `ios/`, `backend/` and `frontend/` are retired. Removing their code from the repo is a separate cleanup step | The Settings "server URL" is gone. |
 
 ## 12. User stories
 
@@ -224,6 +226,7 @@ The app is "done" for v1 when, on my iPhone, I can:
 | 2026-09-20 | Tags and emotions are LLM-derived from v1 with no rule-based tagging, and the written summary is in v1 (moved out of "later"). Where the LLM is called from is decided in the architecture pass. |
 | 2026-09-20 | The phone calls the LLM directly with a user-entered key in the iOS Keychain (option A). The Mac server is not part of the app; the Settings "server" section becomes an "AI" section. |
 | 2026-09-20 | Two keys with separate jobs: OpenAI only for transcription, OpenRouter for tagging, emotions and the written summary. No banner for a missing key; the assistant reports setup problems to the user instead. |
+| 2026-09-20 | Architecture pass complete: on-device SQLite with audio and photos as files; OpenAI hosted transcription; export plus the iPhone backup with no sync; a short background window after save with resume on next open; fresh start with no import of old entries. |
 | 2026-09-20 | Charts are custom-drawn inside native chrome (`@expo/ui` has no Swift Charts in SDK 57). |
 | 2026-09-20 | The plan lives in this PRD; the separate requirements doc is retired. |
 | 2026-09-20 | The phone must work without a server; saving never blocks on network. Storage technology is decided in a separate architecture pass (section 11). |
@@ -245,9 +248,8 @@ The app is "done" for v1 when, on my iPhone, I can:
 
 ## 17. Open questions
 
-- The remaining section 11 architecture decisions (storage engine, transcription, LLM provider and model, backup and sync).
 - The exact limit on theme tags per entry (currently "about 3") and normalization rules (for example merging near-duplicate tags).
-- Whether to delete the `ios/` SwiftUI code and the `frontend/` web prototype from the repo now, or leave them in place until the architecture pass.
+- Removing the retired `ios/`, `backend/` and `frontend/` code from the repo, and updating the root `README.md`, `package.json` and `docs/TECH_DESIGN.md`, which still describe the old prototype.
 
 ## 18. Roadmap beyond v1
 
