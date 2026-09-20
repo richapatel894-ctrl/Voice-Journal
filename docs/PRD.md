@@ -53,7 +53,7 @@ Four native tabs: **Home**, **Entries**, **Insights**, **Settings**. Media (atta
 ## 8. Screen requirements
 
 ### 8.1 Home
-- Top to bottom: a streak row, a warm time-of-day greeting with "How are you feeling today?" (copy only, no mood picker; emotion is auto-detected), the **big Record button** (the hero), a smaller **Write** button, and a "Today" section.
+- Top to bottom: a streak row, a warm time-of-day greeting that uses your name from Profile (for example "Good morning, Richa") with "How are you feeling today?" (copy only, no mood picker; emotion is auto-detected), the **big Record button** (the hero), a smaller **Write** button, and a "Today" section.
 - **Streak row:** seven weekday dots for the current week with today ringed, the current streak count, and the record streak. On the first save of the day: a haptic and a checkmark animation inside the save toast. There is no full-screen celebration.
 - **Today section** shows only today's entries, deliberately avoiding an infinite feed. Empty state: "Nothing yet today. Speak or write your first thought." Past days are reached through Entries.
 - Entry cards on Home have a "..." menu for edit and delete.
@@ -67,7 +67,7 @@ Four native tabs: **Home**, **Entries**, **Insights**, **Settings**. Media (atta
 - After save: the silent auto-tag runs (section 9) and the toast shows.
 
 ### 8.3 Composer (text)
-- **Write** opens a sheet with a text editor and a "+" menu for attachments (photos, files, links). The same sheet is used to edit an existing entry, where it also shows the tag editor (theme tags, and emotions with a maximum of three).
+- **Write** opens a sheet with a text editor and a "+" menu for attachments (photos, videos, files, links). The same sheet is used to edit an existing entry, where it also shows the tag editor (theme tags, and emotions with a maximum of three).
 - Cancel and Save in the toolbar. Errors appear inline.
 
 ### 8.4 Entries
@@ -98,19 +98,28 @@ One scrollable page. Sections, top to bottom:
 - Filters from the Entries chip strip do not carry over to Insights in v1. The strip's filter state should be one shared value so Insights can reuse it later.
 
 ### 8.7 Settings
-- **Reminders:** on/off, time, and weekday selection, delivered as local notifications.
+Four sections, in this order:
+- **Profile:** your name, which Home uses in the greeting, and a small summary line: total entries, current streak, and "journaling since". There is no gender, age or location, and no login or logout, because there are no accounts.
 - **Appearance:** system, light or dark.
-- **Media:** a grid of all attached photos, files and links.
-- **Data:** export all entries as JSON plus audio through the iOS share sheet. This is the backup story for a phone-only store.
-- **AI:** two API keys, entered by you and stored in the iOS Keychain, never bundled into the app: an **OpenAI key used only for voice transcription**, and an **OpenRouter key used for everything else the LLM does** (tags, emotions and the written summary). Includes a "Test connection" button and a count of entries still waiting for transcription or tagging. There is no in-app banner or setup screen for a missing key.
-- **About.**
+- **Media:** a single row that opens the Media page (section 8.8). Settings itself shows no files.
+- **About:** the app version.
 
-### 8.8 Onboarding and permissions
+Not in v1 and not in Settings: reminders, language, an app lock, data export, and any AI or API-key screen (keys are not a user-facing setting; see section 11).
+
+### 8.8 Media page
+- Opened from Settings, Media. It lists every attachment across all entries, newest first, grouped by month.
+- A native segmented filter: All, Photos, Videos, Files, Links.
+- Photos and videos show as thumbnails (videos with a duration badge). Files show an icon and name. Links show a title and domain.
+- Tapping an item opens it full screen, with a "Go to entry" action.
+- Empty state: "Nothing attached yet. Add photos, videos, files or links when you write an entry."
+- **How media is saved:** each attachment is copied into the app's own storage, so it survives the original being deleted from your camera roll and is covered by the iPhone backup. Photos are downscaled to about 2000 px on the long side, and videos use the picker's medium-quality export with no length cap. A thumbnail is made when the item is attached. Links are stored as a URL and a title, with no file. Deleting an entry deletes its attachment files.
+
+### 8.9 Onboarding and permissions
 - **No welcome carousel.**
 - The microphone permission is requested at the first Record tap (section 8.2).
-- The **reminder is offered right after the first saved entry** ("Want a nudge tomorrow at 8pm?"), and the notification permission is requested only if the user accepts.
+- Photo and video access uses the system picker when the user attaches something. There is no notification permission in v1.
 
-### 8.9 Default states (assumed unless changed)
+### 8.10 Default states (assumed unless changed)
 - Loading: skeleton or native progress indicator, never a blocking spinner over capture.
 - Transcribing: inline on the entry card and detail.
 - Errors: inline text next to the thing that failed, with a retry where one makes sense.
@@ -136,14 +145,14 @@ This section states *what* data the UX needs. It deliberately does not choose th
 | **Audio recording** | file, duration, waveform data (for the player card), owning entry | Voice entries keep their audio. The SwiftUI app discarded it. |
 | **Tagging status** | per entry: pending, done, failed; the LLM model used | Lets untagged entries be retried and lets tags be regenerated if the model changes. |
 | **Period summary** | period, generated text, generated-at time | The cached written summary shown in Insights. |
-| **Attachment** | type (photo, file, link), file or URL, owning entry | Photos, files and links, browsable in Settings. |
+| **Attachment** | type (photo, video, file, link), owning entry, file path, thumbnail path, file size, created time, and for videos the duration; for links a URL and title instead of a file | Photos, videos, files and links, browsable on the Media page. |
 | **Streak inputs** | the set of days that have at least one entry | Derived from entries, not stored separately. Timezone-aware. |
-| **Settings** | reminder on/off, time, weekdays; appearance | Small key-value data. |
+| **Profile and settings** | name, appearance | Small key-value data. |
 
 **Constraints the UX places on storage:**
 1. **Saving never blocks on the network** (design principle 3). The entry and its audio are durable on the phone before any transcription or tagging happens.
 2. **Filter and count queries must be fast:** by tag (OR), by emotion (AND), by day, by text, and by period, over thousands of entries.
-3. **Export must be possible** (JSON plus audio files).
+3. **All entry data and media live in backup-eligible app storage**, so the iPhone backup covers them (to verify while building).
 4. Privacy is explicit: entries and audio are stored on the device, but entry text is sent to an LLM provider for tagging and summaries, and audio or transcripts may go to a transcription service depending on the section 11 decision.
 
 ## 11. Architecture decisions
@@ -153,9 +162,10 @@ The UX decisions above fixed the *requirements* on data (section 10). This secti
 | Decision | Options | UX consequence |
 |---|---|---|
 | **Where entries live** | **Decided: on-device SQLite (`expo-sqlite`).** Audio and photos are files in the app's storage; the database holds only their paths | The phone works alone (section 5, principle 3). SQLite serves the tag, emotion, day, period and text-search queries. |
-| **Transcription** | **Decided: OpenAI's hosted transcription (Whisper), called from the phone with the OpenAI key.** On-device recognition can be added later for offline use | Audio is uploaded to OpenAI. Drives the "Transcribing..." state and the failure and retry path. |
-| **LLM tagging, emotions and summary** | **Decided: LLM-derived, no rule-based tagging. The phone calls OpenRouter directly (no Mac server, no proxy) with a user-entered key in the iOS Keychain.** The starting model is `openai/gpt-5.6-luna`, as in the current backend; prompt design and result validation are left to implementation | Works on any network. Saving is instant and tagging happens in the background, retried when offline. A key on the phone can be extracted if someone gets your unlocked phone; acceptable for a single-user app. The emotion map and heatmap are computed on the phone from the stored tags; only tagging and the written summary call the LLM. |
-| **Backup or sync** | **Decided: Settings export (JSON plus audio) plus the automatic iPhone backup; no sync between devices.** To verify while building step 5: that the app's audio and database files are included in device backups | Export in Settings is required. Sync stays a non-goal. |
+| **Transcription** | **Open, to revisit.** Hosted Whisper needs an OpenAI key, and only an OpenRouter key exists. Options: on-device speech recognition (recommended: no key, works offline, audio stays on the phone; verify long recordings) or an audio-capable model through OpenRouter (unverified) | Drives the "Transcribing..." state and the failure and retry path. |
+| **LLM tagging, emotions and summary** | **Decided: LLM-derived, no rule-based tagging. The phone calls OpenRouter directly (no Mac server, no proxy).** The starting model is `openai/gpt-5.6-luna`, as in the current backend; prompt design and result validation are left to implementation | Works on any network. Saving is instant and tagging happens in the background, retried when offline. The emotion map and heatmap are computed on the phone from the stored tags; only tagging and the written summary call the LLM. |
+| **API keys** | **Decided direction, to revisit: keys are read at build time from a git-ignored `mobile/.env.local` (`EXPO_PUBLIC_OPENROUTER_API_KEY`), with no in-app screen.** Only an OpenRouter key exists today | A key inside the app can be extracted, which is acceptable for a personal single-user build. Before any App Store release the calls must move behind a proxy. Changing a key means a rebuild. |
+| **Backup or sync** | **Decided: the automatic iPhone backup only. No export in v1 (moved to v2) and no sync between devices.** To verify while building: that the app's database, audio and media files are included in device backups | Trade-off: a lost phone without a backup means a lost journal. |
 | **When iOS suspends the app** | **Decided: after a save, request a short extra background window. Any unfinished transcription or tagging resumes the next time the app opens.** Entries keep their pending state until then | No background-upload system in v1. |
 | **Existing entries** | **Decided: fresh start.** The entries in `data/journal.db` are not imported | The old `data/` folder stays only as a local archive. |
 | **Server's role** | **Decided: none.** The app does not use the Express backend, and `ios/`, `backend/` and `frontend/` are retired. Removing their code from the repo is a separate cleanup step | The Settings "server URL" is gone. |
@@ -166,7 +176,7 @@ The UX decisions above fixed the *requirements* on data (section 10). This secti
 |---|---|---|---|
 | U1 | open the app and immediately record | capturing a thought takes under 2 seconds | The Record button is the largest element on Home; one tap opens the recorder and starts recording. |
 | U2 | type an entry instead | I can journal silently | Write produces an entry identical in every other way to a voice one. |
-| U3 | attach a photo, file or link | I keep context with the memory | Attachments show on the entry and in Settings, Media. |
+| U3 | attach a photo, video, file or link | I keep context with the memory | Attachments show on the entry and on the Media page (Settings, Media). |
 | U4 | have the date and time recorded | I never think about it | Every entry shows its created timestamp. |
 | U5 | have themes and emotions detected for me | I don't tag by hand | After save, tags appear on the entry with no extra step. |
 | U6 | correct a wrong tag | my data stays accurate | Editing tags updates the entry immediately. |
@@ -174,9 +184,9 @@ The UX decisions above fixed the *requirements* on data (section 10). This secti
 | U8 | see my emotions as a visual map | I notice patterns over time | The bubble map renders for the selected period; tapping a bubble opens its entries. |
 | U9 | replay my voice entries | the memory is in my own voice | The Entry detail plays the saved audio with a waveform and shows the transcript. |
 | U10 | see my streak and this week at a glance | I feel the pull to come back | Home shows weekday dots, the current streak and the record streak. |
-| U11 | get a reminder at a time I choose | I stop forgetting to journal | Settings sets day and time; a local notification fires; it is offered after the first entry. |
-| U12 | export my data | a lost phone does not lose my journal | Settings, Data exports JSON plus audio via the share sheet. |
 | U13 | read a written summary of a period | I see what I've been feeling and writing about without reading every entry | Insights shows an LLM-written summary for the selected period, cached and regenerable. |
+
+Stories U11 (reminders) and U12 (export) moved to v2.
 
 ## 13. Build phases
 
@@ -184,7 +194,7 @@ The UX decisions above fixed the *requirements* on data (section 10). This secti
 2. Record, save and Home.
 3. Entries: chip strip, search, detail and edit.
 4. Text composer and attachments.
-5. Reminders and Settings (including export).
+5. Settings (Profile, Appearance, Media, About) and the Media page.
 6. Insights.
 7. Polish.
 
@@ -192,7 +202,9 @@ The UX decisions above fixed the *requirements* on data (section 10). This secti
 
 ## 14. Non-goals
 
-- No login, accounts or sync across devices in v1.
+- No login, logout, accounts or sync across devices in v1.
+- No reminders or notifications, no language selection, no app lock, and no data export in v1 (all v2).
+- No profile fields beyond name.
 - No sharing or social features.
 - No Android, and no iPad-specific layout.
 - No perfect AI categorization: "good enough and easy to correct" beats "perfect". Tags are LLM-derived, so they can be wrong; editing is the safety net.
@@ -204,14 +216,13 @@ The UX decisions above fixed the *requirements* on data (section 10). This secti
 
 The app is "done" for v1 when, on my iPhone, I can:
 1. Tap Record and start speaking in one tap, stop, and see a saved entry that transcribes and tags itself, with the phone offline.
-2. Write a text entry and attach a photo, and see both on the entry.
+2. Write a text entry, attach a photo and a video, and see them on the entry and on the Media page.
 3. Correct a tag and see it stick, and see it reflected in the chip strip counts.
 4. Filter Entries with two chips and the emotion menu and get the expected set.
 5. Replay a voice entry's audio from the Entry detail.
 6. Open Insights, pick a period, tap an emotion bubble or a heatmap day, and land on the matching entries.
 7. Read a written summary in Insights for the selected period.
-8. Get a daily reminder at the time I set.
-9. Export everything, close and reopen the app, and find all my data still there.
+8. Close and reopen the app and find all my data still there.
 
 ## 16. Decision log
 
@@ -224,9 +235,9 @@ The app is "done" for v1 when, on my iPhone, I can:
 | 2026-09-20 | Home hero is the big Record button, with greeting and streak above it. |
 | 2026-09-20 | Silent auto-tag with a toast on save; tags are editable later (no confirm step). |
 | 2026-09-20 | Tags and emotions are LLM-derived from v1 with no rule-based tagging, and the written summary is in v1 (moved out of "later"). Where the LLM is called from is decided in the architecture pass. |
-| 2026-09-20 | The phone calls the LLM directly with a user-entered key in the iOS Keychain (option A). The Mac server is not part of the app; the Settings "server" section becomes an "AI" section. |
-| 2026-09-20 | Two keys with separate jobs: OpenAI only for transcription, OpenRouter for tagging, emotions and the written summary. No banner for a missing key; the assistant reports setup problems to the user instead. |
-| 2026-09-20 | Architecture pass complete: on-device SQLite with audio and photos as files; OpenAI hosted transcription; export plus the iPhone backup with no sync; a short background window after save with resume on next open; fresh start with no import of old entries. |
+| 2026-09-20 | The phone calls OpenRouter directly for tagging, emotions and the written summary. The Mac server is not part of the app. |
+| 2026-09-20 | Keys are read at build time from a git-ignored `mobile/.env.local`, with no in-app screen and no missing-key banner. Only an OpenRouter key exists, so the transcription approach is open (section 11). |
+| 2026-09-20 | Architecture pass: on-device SQLite with audio and photos as files; the iPhone backup only, with no export and no sync; a short background window after save with resume on next open; fresh start with no import of old entries. |
 | 2026-09-20 | Charts are custom-drawn inside native chrome (`@expo/ui` has no Swift Charts in SDK 57). |
 | 2026-09-20 | The plan lives in this PRD; the separate requirements doc is retired. |
 | 2026-09-20 | The phone must work without a server; saving never blocks on network. Storage technology is decided in a separate architecture pass (section 11). |
@@ -238,8 +249,9 @@ The app is "done" for v1 when, on my iPhone, I can:
 | 2026-09-20 | Tags are open-ended (about 3 per entry, seeded from the 10-theme catalog). |
 | 2026-09-20 | Insights v1: parity (emotion map, snapshot, heatmap), stat tiles and mood-over-time. Written summary, frequent words and weekly mood come later. Written summary, frequent words and weekly mood come later. |
 | 2026-09-20 | Filters do not carry over to Insights in v1. |
-| 2026-09-20 | No onboarding carousel; permissions in context; reminder offered after the first entry. |
-| 2026-09-20 | Settings includes Data export. |
+| 2026-09-20 | No onboarding carousel; permissions are requested in context. |
+| 2026-09-20 | Settings v1 is Profile (name and a summary line), Appearance, Media (opens the Media page) and About. Reminders, language, app lock and data export move to v2. Login and logout are dropped (no accounts). |
+| 2026-09-20 | Media is copied into app storage, photos downscaled to about 2000 px, videos medium quality, thumbnails at attach time, files deleted with their entry. Attachment types are photos, videos, files and links. |
 | 2026-09-20 | Retire the SwiftUI app from the start, with no cutover gate. The web prototype is no longer developed; its removal is decided with the architecture pass. |
 | 2026-09-20 | Emotions are capped at three per entry, for auto-tagging and for manual edits. |
 | 2026-09-20 | Android is a non-goal; the streak day rolls over at midnight. |
@@ -248,11 +260,13 @@ The app is "done" for v1 when, on my iPhone, I can:
 
 ## 17. Open questions
 
+- **API keys and transcription, to revisit:** only an OpenRouter key exists. Whether transcription is on-device (recommended) or through OpenRouter, and how keys are supplied before any App Store release.
 - The exact limit on theme tags per entry (currently "about 3") and normalization rules (for example merging near-duplicate tags).
 - Removing the retired `ios/`, `backend/` and `frontend/` code from the repo, and updating the root `README.md`, `package.json` and `docs/TECH_DESIGN.md`, which still describe the old prototype.
 
 ## 18. Roadmap beyond v1
 
+- **Moved from v1 to v2:** reminders and notifications (the core problem is forgetting to journal, so this is the first v2 item), language selection, an app lock with Face ID, and data export.
 - Frequent words and weekly mood in Insights.
 - **Theme-scoped Insights** (the emotion map for one tag), reusing the shared filter state.
 - **Saved filters** as lightweight collections.
