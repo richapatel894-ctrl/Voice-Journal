@@ -25,7 +25,7 @@ Just me: a single-user personal tool. No accounts, no sharing, no multi-tenant c
 ## 4. Platform and scope
 
 - **Target platform: iPhone (iOS).** Android is not a goal.
-- **One client: the Expo (React Native) app in `mobile/`.** It fully replaces the SwiftUI app (`ios/`) and the web prototype (`frontend/`). The SwiftUI app is retired at the cutover gate in section 13.
+- **One client: the Expo (React Native) app in `mobile/`.** It fully replaces the SwiftUI app (`ios/`), which is retired from the start: it is not developed further, and it stays reachable only through git history as a porting reference. The web prototype (`frontend/`) is not developed further either; whether its code is removed is decided with the architecture pass (section 11), because the Express backend serves it.
 - **Native look and feel is a requirement.** Chrome uses real native components: `NativeTabs` from `expo-router` and `@expo/ui` (SwiftUI-backed sheets, pickers, lists, swipe actions, context menus). Charts are custom-drawn (`react-native-svg` or Skia) inside native chrome, because `@expo/ui` in SDK 57 has no charting components.
 - Because these are native modules, the app runs as a custom dev client build (`npx expo run:ios`), not in Expo Go.
 
@@ -67,7 +67,7 @@ Four native tabs: **Home**, **Entries**, **Insights**, **Settings**. Media (atta
 - After save: the silent auto-tag runs (section 9) and the toast shows.
 
 ### 8.3 Composer (text)
-- **Write** opens a sheet with a text editor and a "+" menu for attachments (photos, files, links). The same sheet is used to edit an existing entry, where it also shows the tag editor.
+- **Write** opens a sheet with a text editor and a "+" menu for attachments (photos, files, links). The same sheet is used to edit an existing entry, where it also shows the tag editor (theme tags, and emotions with a maximum of three).
 - Cancel and Save in the toolbar. Errors appear inline.
 
 ### 8.4 Entries
@@ -77,20 +77,20 @@ Four native tabs: **Home**, **Entries**, **Insights**, **Settings**. Media (atta
 - **Emotion filter** is a native menu. **Sort** is a native menu (newest, oldest).
 - **Search** covers text, theme and emotion.
 - Tapping an entry pushes the **Entry detail**. Edit and delete are native swipe actions and a context menu.
-- Tapping a day in the Insights heatmap, or an emotion bubble, opens Entries with that filter applied. There is no separate calendar screen and no separate Collections page.
+- Tapping a day in the Insights calendar, or an emotion bubble, opens Entries with that filter applied. The calendar lives in Insights (section 8.6); Entries has no separate calendar screen and no separate Collections page.
 - Empty state: "No entries yet. Go record one!"
 
 ### 8.5 Entry detail
 - For voice entries: an **audio player card** (waveform, scrub, back and forward 15 seconds) with the transcript underneath.
-- Tags (themes and emotions) shown by name and editable; attachments; created timestamp; edit and delete.
+- Tags (themes and up to three emotions) shown by name and editable; attachments; created timestamp; edit and delete.
 
 ### 8.6 Insights
-- **Period picker:** 3M / 6M / 12M / Year / All. **Every** layer respects it, including the heatmap (currently a bug in the SwiftUI app).
+- **Period picker:** 3M / 6M / 12M / Year / All. It drives the emotion map, snapshot, stat tiles and mood-over-time. The calendar (below) is month-scoped and has its own month control.
 - **Emotion map:** valence and arousal bubbles, sized by count. Tapping a bubble opens Entries filtered to that emotion.
 - **Snapshot:** entry count, most-written theme, most-felt emotion, plus an actionable card (what, why, how) for the selected emotion.
 - **Stat tiles:** current streak, record streak, total entries, days journaling.
 - **Mood over time:** an area chart of valence per entry over the selected period.
-- **Journaling heatmap:** frequency by day. Tapping a day opens Entries for that day.
+- **Journaling calendar:** a month view that shows which days you journaled, with a summary such as "14 of 30 days journaled". Days with entries are marked, and the shade reflects how many entries that day has. Previous and next controls move between months, starting on the current month. Tapping a day opens Entries for that day. This replaces the old all-time heatmap, which ignored the period picker.
 - **Later (not v1):** a written summary layer (what you've been feeling, writing about, and what's top of mind), a frequent-words view, and a weekly mood view. The written summary needs an LLM, so it follows the architecture decision in section 11.
 - Filters from the Entries chip strip do not carry over to Insights in v1. The strip's filter state should be one shared value so Insights can reuse it later.
 
@@ -115,7 +115,7 @@ Four native tabs: **Home**, **Entries**, **Insights**, **Settings**. Media (atta
 ## 9. Tagging model
 
 - **Themes are open-ended tags.** An entry has up to about 3 tags. Auto-tagging suggests them, seeded from the original 10-theme catalog so names stay consistent. The user can add, rename or remove tags, and these tags feed the Entries chip strip.
-- **Emotions are one-to-many.** An entry can carry several emotions (for example happy and anxious) and is filed under all of them. The first tag is the "primary" emotion for tight UI spots (a card dot, a thumbnail); collections and insights treat every tag as fully valid.
+- **Emotions are one-to-many, with a maximum of three per entry.** An entry can carry up to three emotions (for example happy, anxious and tired) and is filed under all of them. Auto-tagging never assigns more than three, and when editing you can tap at most three emotions; a fourth tap is disabled until one is removed. The first tag is the "primary" emotion for tight UI spots (a card dot, a thumbnail); collections and insights treat every tag as fully valid.
 - **The emotion map aggregates by full count:** each tag counts fully toward its emotion, not split-weighted, because it reads more intuitively as frequency.
 - **Silent auto-tag, editable later.** There is no confirm step after save. Corrections happen in the Composer or on the Entry detail. Corrections are recorded, because they quietly build a labeled dataset for a better tagger later.
 - Entries are the single source of truth. Theme and emotion tags are attributes of an entry, never folders an entry is moved into.
@@ -128,7 +128,7 @@ This section states *what* data the UX needs. It deliberately does not choose th
 |---|---|---|
 | **Entry** | id, kind (voice or text), created timestamp (ISO 8601 UTC), text (transcript or typed), transcription status (pending, done, failed), user-edited flag | One store, ordered by created timestamp. |
 | **Tag (theme)** | name, per-entry assignment, source (auto or user), confidence | Open-ended. Up to about 3 per entry. Entry counts per tag must be cheap to compute for the chip strip. |
-| **Emotion assignment** | emotion name, per-entry, order (first is primary), valence, arousal | Many per entry. Valence and arousal drive the emotion map and the mood-over-time chart. |
+| **Emotion assignment** | emotion name, per-entry, order (first is primary), valence, arousal | Up to 3 per entry. Valence and arousal drive the emotion map and the mood-over-time chart. |
 | **Audio recording** | file, duration, waveform data (for the player card), owning entry | Voice entries keep their audio. The SwiftUI app discarded it. |
 | **Attachment** | type (photo, file, link), file or URL, owning entry | Photos, files and links, browsable in Settings. |
 | **Streak inputs** | the set of days that have at least one entry | Derived from entries, not stored separately. Timezone-aware. |
@@ -169,17 +169,17 @@ The UX decisions above fix the *requirements* on data. The following *technology
 | U11 | get a reminder at a time I choose | I stop forgetting to journal | Settings sets day and time; a local notification fires; it is offered after the first entry. |
 | U12 | export my data | a lost phone does not lose my journal | Settings, Data exports JSON plus audio via the share sheet. |
 
-## 13. Build phases and cutover gate
+## 13. Build phases
 
 1. Theme, app shell and data layer (needs the section 11 decisions).
 2. Record, save and Home.
 3. Entries: chip strip, search, detail and edit.
 4. Text composer and attachments.
 5. Reminders and Settings (including export).
-6. Insights.
+6. Insights (including the month calendar).
 7. Polish.
 
-**Cutover gate:** retire the SwiftUI app (`ios/`) and the web prototype (`frontend/`) once steps 1 to 5 work. That covers the daily loop, and Insights follows.
+**No cutover gate.** The SwiftUI app is retired from the start (section 4). The trade-off is that there is no working phone client until the daily loop (steps 1 to 5) exists in Expo, so the build should reach a usable Home, Record and Entries as early as possible.
 
 ## 14. Non-goals
 
@@ -199,7 +199,7 @@ The app is "done" for v1 when, on my iPhone, I can:
 3. Correct a tag and see it stick, and see it reflected in the chip strip counts.
 4. Filter Entries with two chips and the emotion menu and get the expected set.
 5. Replay a voice entry's audio from the Entry detail.
-6. Open Insights, pick a period, tap an emotion bubble or a heatmap day, and land on the matching entries.
+6. Open Insights, pick a period, tap an emotion bubble or a calendar day, and land on the matching entries; and see how many days of the month I journaled.
 7. Get a daily reminder at the time I set.
 8. Export everything, close and reopen the app, and find all my data still there.
 
@@ -222,18 +222,21 @@ The app is "done" for v1 when, on my iPhone, I can:
 | 2026-09-20 | Streak row with weekday dots, current and record streak, and a light celebration on first save. |
 | 2026-09-20 | Entries: month and day headers, plus a horizontal tag chip strip (multi-select, OR within tags, AND with emotion). No separate Collections page. |
 | 2026-09-20 | Tags are open-ended (about 3 per entry, seeded from the 10-theme catalog). |
-| 2026-09-20 | Insights v1: parity, heatmap respects the period, stat tiles, mood-over-time. Written summary, frequent words and weekly mood come later. |
+| 2026-09-20 | Insights v1: parity, stat tiles, mood-over-time, and a month calendar (see the calendar decision below). Written summary, frequent words and weekly mood come later. |
 | 2026-09-20 | Filters do not carry over to Insights in v1. |
 | 2026-09-20 | No onboarding carousel; permissions in context; reminder offered after the first entry. |
 | 2026-09-20 | Settings includes Data export. |
-| 2026-09-20 | Cutover gate: retire SwiftUI and web once build steps 1 to 5 work. |
+| 2026-09-20 | Retire the SwiftUI app from the start, with no cutover gate. The web prototype is no longer developed; its removal is decided with the architecture pass. |
+| 2026-09-20 | Emotions are capped at three per entry, for auto-tagging and for manual edits. |
+| 2026-09-20 | Android is a non-goal; the streak day rolls over at midnight. |
+| 2026-09-20 | The calendar view lives in Insights as a month view showing how many days of the month were journaled, replacing the all-time heatmap. |
 | superseded | The old "PWA vs backend vs Capacitor" question is resolved: a native Expo app. The "backend appetite" question is now the section 11 architecture pass. |
 
 ## 17. Open questions
 
 - The section 11 architecture decisions (storage engine, transcription, auto-tagging, backup and sync, the server's role).
-- Exact tag limits and normalization rules (for example merging near-duplicate tags).
-- The precise streak rule (timezone boundary, and whether the day rolls over at midnight or at a chosen hour).
+- The exact limit on theme tags per entry (currently "about 3") and normalization rules (for example merging near-duplicate tags).
+- Whether to delete the `ios/` SwiftUI code and the `frontend/` web prototype from the repo now, or leave them in place until the architecture pass.
 
 ## 18. Roadmap beyond v1
 
