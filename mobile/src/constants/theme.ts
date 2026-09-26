@@ -1,6 +1,7 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Voice Journal visual identity (PRD `docs/PRD.md` §6): warm cream, serif
+ * titles, the brand pink accent, and a deep-plum dark mode instead of pure
+ * black.
  */
 
 import '@/global.css';
@@ -9,18 +10,22 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: '#2B211C',
+    background: '#FAF6F0',
+    backgroundElement: '#F1E9DE',
+    backgroundSelected: '#E7D9CB',
+    textSecondary: '#6B5F55',
+    accent: '#D9557A',
+    accentSoft: '#FFC9DA',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: '#F5EDF0',
+    background: '#241620',
+    backgroundElement: '#31212C',
+    backgroundSelected: '#402C39',
+    textSecondary: '#B9A8B3',
+    accent: '#FF9DB8',
+    accentSoft: '#4A2C3B',
   },
 } as const;
 
