@@ -43,7 +43,7 @@ Just me: a single-user personal tool. No accounts, no sharing, no multi-tenant c
 - **Direction:** warm cream background, serif large titles (system serif), small-caps tracked labels, soft rounded cards with no heavy shadows, system sans for body text.
 - **Accent:** the existing brand pink (`#D9557A` dark, `#FFC9DA` light), replacing the amber of the reference apps.
 - **Emotion colors:** the existing per-emotion pastel palette.
-- **Dark mode:** supported, follows the system setting, and uses a deep plum background instead of pure black.
+- **Dark mode:** deprioritized for now (2026-09-27) — v1 targets light mode only. The color values and the Appearance override mechanism exist (deep plum background instead of pure black), but the Settings Appearance choice is limited to System/Light while a dark-mode bug in the native tab bar is open (see the app's own decision log / memory, not duplicated here). Revisit once that's resolved.
 - **References** (in `App UX inspirations/`): 5 Minute Journal for the cream and serif look, the feed grouping and the stat tiles; Apple Journal for the audio playback card; the dark color-block app for the streak row; pillowtalk for restraint.
 
 ## 7. Information architecture
@@ -258,6 +258,7 @@ The app is "done" for v1 when, on my iPhone, I can:
 | 2026-09-20 | Android is a non-goal; the streak day rolls over at midnight. |
 | 2026-09-20 | No separate month calendar: the Insights heatmap is the view of which days have entries, and it now respects the period picker. |
 | superseded | The old "PWA vs backend vs Capacitor" question is resolved: a native Expo app. The "backend appetite" question is now the section 11 architecture pass. |
+| 2026-09-27 | Dark mode deprioritized for v1: light mode only, because of an open bug where the native tab bar corrupts label text in dark mode. Moved to the v2 roadmap. |
 
 ## 17. Open questions
 
@@ -267,7 +268,7 @@ The app is "done" for v1 when, on my iPhone, I can:
 
 ## 18. Roadmap beyond v1
 
-- **Moved from v1 to v2:** reminders and notifications (the core problem is forgetting to journal, so this is the first v2 item), language selection, an app lock with Face ID, and data export.
+- **Moved from v1 to v2:** reminders and notifications (the core problem is forgetting to journal, so this is the first v2 item), language selection, an app lock with Face ID, data export, and dark mode (blocked on a native tab bar bug — see the decision log).
 - Frequent words and weekly mood in Insights.
 - **Theme-scoped Insights** (the emotion map for one tag), reusing the shared filter state.
 - **Saved filters** as lightweight collections.

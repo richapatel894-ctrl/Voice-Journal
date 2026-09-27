@@ -1,5 +1,3 @@
-import { Host, Picker, Text as UIText } from '@expo/ui/swift-ui';
-import { pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
 import Constants from 'expo-constants';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -11,14 +9,12 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { computeStreak, entriesSummary, getProfileName, setProfileName } from '@/data';
-import { useAppearance } from '@/hooks/use-appearance';
 import { useTheme } from '@/hooks/use-theme';
 import { formatMonthYear } from '@/lib/date';
 
 export default function SettingsScreen() {
   const db = useSQLiteContext();
   const theme = useTheme();
-  const { mode, setMode } = useAppearance();
   const [name, setName] = useState('');
   const [summary, setSummary] = useState<{ total: number; streak: number; since: string | null }>({
     total: 0,
@@ -66,22 +62,6 @@ export default function SettingsScreen() {
               {summary.total} {summary.total === 1 ? 'entry' : 'entries'} · {summary.streak}-day streak
               {summary.since ? ` · journaling since ${formatMonthYear(summary.since)}` : ''}
             </ThemedText>
-          </View>
-
-          <View style={styles.section}>
-            <ThemedText type="label" themeColor="textSecondary">
-              Appearance
-            </ThemedText>
-            <Host matchContents seedColor={theme.accent}>
-              <Picker
-                modifiers={[pickerStyle('segmented')]}
-                selection={mode}
-                onSelectionChange={(v) => setMode(v as typeof mode)}>
-                <UIText modifiers={[tag('system')]}>System</UIText>
-                <UIText modifiers={[tag('light')]}>Light</UIText>
-                <UIText modifiers={[tag('dark')]}>Dark</UIText>
-              </Picker>
-            </Host>
           </View>
 
           <Pressable onPress={() => router.push('/settings/media')} style={styles.row}>
