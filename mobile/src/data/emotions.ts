@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import type { EmotionTag } from '@/data/types';
+import type { EmotionTag, TagCount } from '@/data/types';
 
 /** PRD §9: an entry carries at most three emotions. */
 export const MAX_EMOTIONS_PER_ENTRY = 3;
@@ -30,4 +30,12 @@ export async function setEntryEmotions(
       );
     }
   });
+}
+
+/** Distinct emotions actually in use, with entry counts — feeds the Entries emotion filter menu. */
+export async function emotionCounts(db: SQLiteDatabase): Promise<TagCount[]> {
+  const rows = await db.getAllAsync<{ tag: string; count: number }>(
+    `SELECT emotion as tag, COUNT(DISTINCT entry_id) as count FROM entry_emotions GROUP BY emotion ORDER BY count DESC, emotion ASC`
+  );
+  return rows;
 }

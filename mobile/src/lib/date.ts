@@ -9,6 +9,20 @@ export function localDayString(date: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
+export function formatDayHeader(day: string): string {
+  const today = localDayString();
+  const yesterday = localDayString(new Date(Date.now() - 86400000));
+  if (day === today) return 'Today';
+  if (day === yesterday) return 'Yesterday';
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: y === new Date().getFullYear() ? undefined : 'numeric',
+  });
+}
+
 const GREETING_BY_HOUR: [max: number, greeting: string][] = [
   [12, 'Good morning'],
   [17, 'Good afternoon'],
