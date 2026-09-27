@@ -1,6 +1,6 @@
 import { Host, Picker, Text as UIText } from '@expo/ui/swift-ui';
 import { pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -48,11 +48,16 @@ function groupByDay(entries: Entry[]): Section[] {
 export default function EntriesScreen() {
   const db = useSQLiteContext();
   const theme = useTheme();
+  const { emotion: emotionParam, day: dayParam } = useLocalSearchParams<{ emotion?: string; day?: string }>();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [themeCounts, setThemeCounts] = useState<TagCount[]>([]);
   const [emotionOptions, setEmotionOptions] = useState<TagCount[]>([]);
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
-  const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
+  // Initial value only: Insights deep-links here with an emotion bubble or a
+  // heatmap day (PRD §8.4). expo-router mounts a fresh screen instance per
+  // push, so seeding state from the params on first render is sufficient.
+  const [selectedEmotion, setSelectedEmotion] = useState<string | null>(() => emotionParam ?? null);
+  const [dayFilter, setDayFilter] = useState<string | null>(() => dayParam ?? null);
   const [sort, setSort] = useState<SortOrder>('newest');
   const [search, setSearch] = useState('');
   const [showMoreThemes, setShowMoreThemes] = useState(false);
@@ -62,6 +67,7 @@ export default function EntriesScreen() {
       listEntries(db, {
         themes: selectedThemes,
         emotions: selectedEmotion ? [selectedEmotion] : [],
+        day: dayFilter ?? undefined,
         search,
         sort,
       }),
@@ -71,7 +77,7 @@ export default function EntriesScreen() {
     setEntries(entryResults);
     setThemeCounts(themeCountResults);
     setEmotionOptions(emotionCountResults);
-  }, [db, selectedThemes, selectedEmotion, search, sort]);
+  }, [db, selectedThemes, selectedEmotion, dayFilter, search, sort]);
 
   useFocusEffect(
     useCallback(() => {
@@ -110,6 +116,18 @@ export default function EntriesScreen() {
           <ThemedText type="title" style={styles.title}>
             Entries
           </ThemedText>
+          {dayFilter && (
+            <View style={styles.dayFilterBanner}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Showing {formatDayHeader(dayFilter)}
+              </ThemedText>
+              <Pressable onPress={() => setDayFilter(null)} hitSlop={8}>
+                <ThemedText type="smallBold" themeColor="accent">
+                  Clear
+                </ThemedText>
+              </Pressable>
+            </View>
+          )}
           <TextInput
             style={[styles.search, { backgroundColor: theme.backgroundElement, color: theme.text }]}
             placeholder="Search text, theme or emotion"
@@ -216,6 +234,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
   header: { paddingHorizontal: Spacing.four, gap: Spacing.three },
+  dayFilterBanner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 32, lineHeight: 40 },
   search: { borderRadius: Spacing.three, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
   chipRow: { gap: Spacing.two, paddingRight: Spacing.four },
