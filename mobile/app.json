@@ -40,6 +40,12 @@
         {
           "microphonePermission": "Voice Journal uses your microphone to record voice entries."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Voice Journal uses your photos to attach them to journal entries."
+        }
       ]
     ],
     "experiments": {

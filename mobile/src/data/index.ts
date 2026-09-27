@@ -1,5 +1,7 @@
 export { DATABASE_NAME, migrateDbIfNeeded } from '@/data/db';
 export * from '@/data/types';
+export * from '@/data/attach-media';
+export * from '@/data/emotion-catalog';
 export * from '@/data/entries';
 export * from '@/data/tags';
 export * from '@/data/emotions';
