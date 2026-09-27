@@ -4,7 +4,7 @@ import { Stack } from 'expo-router';
 export default function EntriesStackLayout() {
   return (
     <Stack>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="index" options={{ headerShown: false, title: 'Entries' }} />
       <Stack.Screen name="[id]" options={{ title: 'Entry' }} />
     </Stack>
   );
