@@ -23,6 +23,11 @@ export function formatDayHeader(day: string): string {
   });
 }
 
+export function formatMonthYear(day: string): string {
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+
 const GREETING_BY_HOUR: [max: number, greeting: string][] = [
   [12, 'Good morning'],
   [17, 'Good afternoon'],

@@ -217,3 +217,13 @@ export async function deleteEntry(db: SQLiteDatabase, id: string): Promise<void>
   // attachments via ON DELETE CASCADE.
   await db.runAsync('DELETE FROM entries WHERE id = ?', id);
 }
+
+/** Total entries and the earliest entry's local day — the Profile summary line (PRD §8.7). */
+export async function entriesSummary(
+  db: SQLiteDatabase
+): Promise<{ total: number; earliestDay: string | null }> {
+  const row = await db.getFirstAsync<{ total: number; earliest: string | null }>(
+    `SELECT COUNT(*) as total, MIN(date(created_at, 'localtime')) as earliest FROM entries`
+  );
+  return { total: row?.total ?? 0, earliestDay: row?.earliest ?? null };
+}

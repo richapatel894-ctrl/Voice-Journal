@@ -1,11 +1,21 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { useAppearance } from '@/hooks/use-appearance';
 
+/**
+ * KNOWN BUG (2026-09-27, on-device): in dark mode, tab labels sometimes
+ * render with corrupted glyphs ("Home" → "Ho...", "Insights" → "Insiahts").
+ * Reproduces even with zero custom colors here and with the native trait
+ * collection genuinely switched via `Appearance.setColorScheme` — so it
+ * isn't caused by our styling. Looks like an upstream bug in
+ * `expo-router/unstable-native-tabs` (an explicitly unstable API). Revisit
+ * after an expo-router bump, or check on a real device (may be
+ * simulator-only).
+ */
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : (scheme ?? 'light')];
+  const { effectiveScheme } = useAppearance();
+  const colors = Colors[effectiveScheme];
 
   return (
     <NativeTabs
