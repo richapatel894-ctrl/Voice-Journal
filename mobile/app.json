@@ -34,7 +34,13 @@
           "imageWidth": 76
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Voice Journal uses your microphone to record voice entries."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

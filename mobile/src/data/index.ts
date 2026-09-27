@@ -9,5 +9,7 @@ export * from '@/data/settings';
 export * from '@/data/period-summaries';
 export * from '@/data/streak';
 export * from '@/data/storage';
+export * from '@/data/save-events';
+export * from '@/data/processing';
 
 export { randomUUID as newId } from 'expo-crypto';

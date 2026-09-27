@@ -75,6 +75,8 @@ export type EntryFilter = {
   emotions?: string[];
   /** Matched against entry text, theme tags and emotion names. */
   search?: string;
+  /** A local calendar day ('YYYY-MM-DD', see src/lib/date.ts) — used by Home to load just today's entries. */
+  day?: string;
   sort?: SortOrder;
 };
 

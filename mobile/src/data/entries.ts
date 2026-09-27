@@ -134,10 +134,14 @@ export async function getEntry(db: SQLiteDatabase, id: string): Promise<Entry | 
  * matches text, a theme or an emotion) — per PRD §8.4.
  */
 export async function listEntries(db: SQLiteDatabase, filter: EntryFilter = {}): Promise<Entry[]> {
-  const { themes = [], emotions = [], search, sort = 'newest' } = filter;
+  const { themes = [], emotions = [], search, day, sort = 'newest' } = filter;
   const clauses: string[] = [];
   const params: (string | number)[] = [];
 
+  if (day) {
+    clauses.push(`date(created_at, 'localtime') = ?`);
+    params.push(day);
+  }
   if (themes.length > 0) {
     clauses.push(
       `id IN (SELECT entry_id FROM entry_tags WHERE tag IN (${placeholders(themes.length)}))`
