@@ -199,6 +199,7 @@ export default function ComposerScreen() {
               autoFocus={!isEditing}
               placeholder="What's on your mind?"
               placeholderTextColor={theme.textSecondary}
+              selectionColor={theme.accentText}
               value={text}
               onChangeText={setText}
             />
@@ -220,14 +221,14 @@ export default function ComposerScreen() {
                   returnKeyType="done"
                 />
                 <Pressable onPress={submitLink} hitSlop={12}>
-                  <ThemedText type="smallBold" themeColor="accent">
+                  <ThemedText type="smallBold" themeColor="accentText">
                     Add
                   </ThemedText>
                 </Pressable>
               </View>
             )}
 
-            <Host matchContents seedColor={theme.accent}>
+            <Host matchContents seedColor={theme.accentText}>
               <Menu label="Attach">
                 <Button label="Photo or Video" onPress={pickPhotoOrVideo} />
                 <Button label="File" onPress={pickFile} />

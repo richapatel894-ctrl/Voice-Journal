@@ -1,7 +1,8 @@
 /**
- * Voice Journal visual identity (PRD `docs/PRD.md` §6): warm cream, serif
- * titles, the brand pink accent, and a deep-plum dark mode instead of pure
- * black.
+ * Voice Journal visual identity (PRD `docs/PRD.md` §6): a warm cream canvas,
+ * beige cards, serif titles and an amber accent, with colors sampled from the
+ * 5 Minute Journal reference screenshots. Dark values are kept but unused
+ * while v1 is light-only.
  */
 
 import '@/global.css';
@@ -10,13 +11,17 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#2B211C',
-    background: '#FAF6F0',
-    backgroundElement: '#F1E9DE',
-    backgroundSelected: '#E7D9CB',
-    textSecondary: '#6B5F55',
-    accent: '#D9557A',
-    accentSoft: '#FFC9DA',
+    text: '#392E22',
+    background: '#F3F1ED',
+    backgroundElement: '#E9E5DF',
+    backgroundSelected: '#DBD7CF',
+    textSecondary: '#857F74',
+    accent: '#FFB700',
+    accentSoft: '#FBE3A0',
+    /** Text/icons drawn on top of an `accent` fill. */
+    onAccent: '#392E22',
+    /** Darker amber for accent-coloured text links, which would be unreadable in `accent` on cream. */
+    accentText: '#946100',
   },
   dark: {
     text: '#F5EDF0',
@@ -24,8 +29,10 @@ export const Colors = {
     backgroundElement: '#31212C',
     backgroundSelected: '#402C39',
     textSecondary: '#B9A8B3',
-    accent: '#FF9DB8',
-    accentSoft: '#4A2C3B',
+    accent: '#FFB700',
+    accentSoft: '#4A3A1A',
+    onAccent: '#241620',
+    accentText: '#FFC933',
   },
 } as const;
 

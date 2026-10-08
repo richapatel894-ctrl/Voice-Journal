@@ -58,15 +58,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: Fonts.serif,
-    fontSize: 48,
-    fontWeight: 600,
-    lineHeight: 52,
+    fontSize: 40,
+    fontWeight: 500,
+    lineHeight: 46,
   },
   subtitle: {
     fontFamily: Fonts.serif,
-    fontSize: 32,
-    lineHeight: 44,
-    fontWeight: 600,
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: 500,
   },
   link: {
     lineHeight: 30,

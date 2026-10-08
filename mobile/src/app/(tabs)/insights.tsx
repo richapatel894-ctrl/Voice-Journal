@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Card } from '@/components/card';
 import { EmotionMap } from '@/components/emotion-map';
 import { HeatmapSummary, JournalingHeatmap } from '@/components/journaling-heatmap';
 import { StatTiles } from '@/components/stat-tiles';
@@ -95,21 +96,13 @@ export default function InsightsScreen() {
             </Picker>
           </Host>
 
-          <View style={styles.section}>
-            <ThemedText type="label" themeColor="textSecondary">
-              Summary
+          <Card title="Summary">
+            <ThemedText themeColor="textSecondary">
+              A written summary needs the AI connection, which is not set up yet.
             </ThemedText>
-            <ThemedView type="backgroundElement" style={styles.card}>
-              <ThemedText themeColor="textSecondary">
-                A written summary needs the AI connection, which is not set up yet.
-              </ThemedText>
-            </ThemedView>
-          </View>
+          </Card>
 
-          <View style={styles.section}>
-            <ThemedText type="label" themeColor="textSecondary">
-              Emotional map
-            </ThemedText>
+          <Card title="Emotional map">
             {emotionPoints.length === 0 ? (
               <ThemedText themeColor="textSecondary">No tagged entries in this period yet.</ThemedText>
             ) : (
@@ -122,31 +115,26 @@ export default function InsightsScreen() {
                 }}
               />
             )}
-          </View>
+          </Card>
 
-          <View style={styles.section}>
-            <ThemedText type="label" themeColor="textSecondary">
-              Your snapshot
+          <Card title="Your snapshot">
+            <ThemedText>
+              {snapshot.entryCount} {snapshot.entryCount === 1 ? 'entry' : 'entries'}
+              {snapshot.topTheme ? ` · mostly about ${snapshot.topTheme}` : ''}
+              {snapshot.topEmotion ? ` · feeling mostly ${snapshot.topEmotion}` : ''}
             </ThemedText>
-            <ThemedView type="backgroundElement" style={styles.card}>
-              <ThemedText>
-                {snapshot.entryCount} {snapshot.entryCount === 1 ? 'entry' : 'entries'}
-                {snapshot.topTheme ? ` · mostly about ${snapshot.topTheme}` : ''}
-                {snapshot.topEmotion ? ` · feeling mostly ${snapshot.topEmotion}` : ''}
-              </ThemedText>
-              {guidance && (
-                <View style={styles.guidance}>
-                  <ThemedText type="smallBold">{guidance.what}</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {guidance.why}
-                  </ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {guidance.how}
-                  </ThemedText>
-                </View>
-              )}
-            </ThemedView>
-          </View>
+            {guidance && (
+              <View style={styles.guidance}>
+                <ThemedText type="smallBold">{guidance.what}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {guidance.why}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {guidance.how}
+                </ThemedText>
+              </View>
+            )}
+          </Card>
 
           <StatTiles
             currentStreak={streak.current}
@@ -155,23 +143,17 @@ export default function InsightsScreen() {
             daysJournaling={daysJournaling}
           />
 
-          <View style={styles.section}>
-            <ThemedText type="label" themeColor="textSecondary">
-              Mood over time
-            </ThemedText>
+          <Card title="Mood over time">
             {chartData.length < 2 ? (
               <ThemedText themeColor="textSecondary">Not enough entries yet to chart a trend.</ThemedText>
             ) : (
               <Host style={styles.chartHost}>
-                <Chart type="area" data={chartData} areaStyle={{ color: theme.accent }} showGrid />
+                <Chart type="area" data={chartData} areaStyle={{ color: `${theme.accent}80` }} showGrid />
               </Host>
             )}
-          </View>
+          </Card>
 
-          <View style={styles.section}>
-            <ThemedText type="label" themeColor="textSecondary">
-              Journaling heatmap
-            </ThemedText>
+          <Card title="Journaling heatmap">
             <HeatmapSummary days={heatmap} sinceDay={sinceDay} />
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <JournalingHeatmap
@@ -180,7 +162,7 @@ export default function InsightsScreen() {
                 onSelectDay={(day) => router.push({ pathname: '/entries', params: { day } })}
               />
             </ScrollView>
-          </View>
+          </Card>
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
@@ -190,10 +172,8 @@ export default function InsightsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
-  title: { fontSize: 32, lineHeight: 40, paddingHorizontal: Spacing.four },
-  content: { padding: Spacing.four, gap: Spacing.five },
-  section: { gap: Spacing.two },
-  card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
+  title: { paddingHorizontal: Spacing.four },
+  content: { padding: Spacing.four, gap: Spacing.four, paddingBottom: Spacing.six + 80 },
   guidance: { gap: Spacing.one, marginTop: Spacing.one },
   chartHost: { height: 160 },
 });

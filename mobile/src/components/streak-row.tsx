@@ -21,29 +21,25 @@ export function StreakRow({ current, daysWithEntries }: StreakRowProps) {
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(startOfWeek);
     date.setDate(startOfWeek.getDate() + i);
-    return {
-      day: localDayString(date),
-      isToday: localDayString(date) === localDayString(today),
-      hasEntry: daysWithEntries.has(localDayString(date)),
-    };
+    const day = localDayString(date);
+    return { day, isToday: day === localDayString(today), hasEntry: daysWithEntries.has(day) };
   });
 
   return (
     <View style={styles.container}>
       <ThemedText type="label" themeColor="textSecondary">
-        {current > 0 ? `🔥 ${current}-day streak` : 'Start your streak today'}
+        {current > 0 ? `${current}-day streak` : 'Start your streak today'}
       </ThemedText>
       <View style={styles.dots}>
         {weekDays.map((d, i) => (
-          <View key={d.day} style={styles.dotColumn}>
-            <View
-              style={[
-                styles.dot,
-                { backgroundColor: d.hasEntry ? theme.accent : theme.backgroundElement },
-                d.isToday && { borderWidth: 2, borderColor: theme.accent },
-              ]}
-            />
-            <ThemedText type="label" themeColor="textSecondary">
+          <View
+            key={d.day}
+            style={[
+              styles.dot,
+              { backgroundColor: d.hasEntry ? theme.accent : theme.backgroundSelected },
+              d.isToday && { borderWidth: 3, borderColor: theme.accent, backgroundColor: d.hasEntry ? theme.accent : theme.background },
+            ]}>
+            <ThemedText type="smallBold" style={{ color: d.hasEntry ? theme.onAccent : theme.textSecondary }}>
               {WEEKDAY_LETTERS[i]}
             </ThemedText>
           </View>
@@ -54,8 +50,7 @@ export function StreakRow({ current, daysWithEntries }: StreakRowProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { gap: Spacing.two },
+  container: { gap: Spacing.three },
   dots: { flexDirection: 'row', justifyContent: 'space-between' },
-  dotColumn: { alignItems: 'center', gap: Spacing.one },
-  dot: { width: 24, height: 24, borderRadius: 12 },
+  dot: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
 });

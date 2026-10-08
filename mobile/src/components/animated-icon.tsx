@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import * as SplashScreen from 'expo-splash-screen';
 import { useState } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -33,7 +33,7 @@ export function AnimatedSplashOverlay() {
     },
   });
 
-  const image = <Image style={styles.image} source={require('@/assets/images/expo-logo.png')} />;
+  const image = <Text style={styles.wordmark}>Voice Journal</Text>;
 
   return animate ? (
     <Animated.View
@@ -131,6 +131,12 @@ const styles = StyleSheet.create({
     width: 76,
     height: 71,
   },
+  wordmark: {
+    fontFamily: 'ui-serif',
+    fontSize: 36,
+    fontWeight: '500',
+    color: '#392E22',
+  },
   background: {
     borderRadius: 40,
     experimental_backgroundImage: `linear-gradient(180deg, #3C9FFE, #0274DF)`,
@@ -140,7 +146,7 @@ const styles = StyleSheet.create({
   },
   splashOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#208AEF',
+    backgroundColor: '#FFB700',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,

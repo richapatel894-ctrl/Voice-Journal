@@ -84,7 +84,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
-  title: { fontSize: 32, lineHeight: 40, paddingHorizontal: Spacing.four },
+  title: { paddingHorizontal: Spacing.four },
   content: { padding: Spacing.four, gap: Spacing.five },
   section: { gap: Spacing.two },
   input: { borderRadius: Spacing.three, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },

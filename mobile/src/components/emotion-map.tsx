@@ -13,7 +13,7 @@ type EmotionMapProps = {
 };
 
 const MAP_SIZE = 288;
-const MIN_BUBBLE = 40;
+const MIN_BUBBLE = 56;
 const MAX_BUBBLE = 84;
 
 export function EmotionMap({ points, selected, onSelect }: EmotionMapProps) {
@@ -34,13 +34,13 @@ export function EmotionMap({ points, selected, onSelect }: EmotionMapProps) {
           </ThemedText>
         </View>
 
-        <View style={[styles.map, { backgroundColor: theme.backgroundElement }]}>
-          <View style={[styles.crosshairV, { backgroundColor: theme.backgroundSelected }]} />
-          <View style={[styles.crosshairH, { backgroundColor: theme.backgroundSelected }]} />
-          {points.map((point) => {
+        <View style={[styles.map, { backgroundColor: theme.background }]}>
+          <View style={[styles.crosshairV, { backgroundColor: theme.backgroundElement }]} />
+          <View style={[styles.crosshairH, { backgroundColor: theme.backgroundElement }]} />
+          {[...points].sort((a, b) => b.count - a.count).map((point) => {
             const size = MIN_BUBBLE + (point.count / maxCount) * (MAX_BUBBLE - MIN_BUBBLE);
-            const x = ((point.valence + 1) / 2) * MAP_SIZE - size / 2;
-            const y = ((1 - point.arousal) / 2) * MAP_SIZE - size / 2;
+            const x = Math.max(0, Math.min(MAP_SIZE - size, ((point.valence + 1) / 2) * MAP_SIZE - size / 2));
+            const y = Math.max(0, Math.min(MAP_SIZE - size, ((1 - point.arousal) / 2) * MAP_SIZE - size / 2));
             const isSelected = selected === point.emotion;
             return (
               <Pressable
@@ -55,12 +55,13 @@ export function EmotionMap({ points, selected, onSelect }: EmotionMapProps) {
                     left: x,
                     top: y,
                     backgroundColor: isSelected ? theme.accent : theme.accentSoft,
+                    opacity: 0.92,
                   },
                 ]}>
                 <ThemedText
                   type="small"
                   numberOfLines={1}
-                  style={{ color: isSelected ? theme.background : theme.text }}>
+                  style={{ color: theme.onAccent }}>
                   {point.emotion}
                 </ThemedText>
               </Pressable>
@@ -89,7 +90,7 @@ const styles = StyleSheet.create({
   map: {
     width: MAP_SIZE,
     height: MAP_SIZE,
-    borderRadius: Spacing.three,
+    borderRadius: 20,
   },
   crosshairV: { position: 'absolute', left: MAP_SIZE / 2, top: 0, bottom: 0, width: 1 },
   crosshairH: { position: 'absolute', top: MAP_SIZE / 2, left: 0, right: 0, height: 1 },

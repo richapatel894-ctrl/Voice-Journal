@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { DATABASE_NAME, ensureDataDirectories, migrateDbIfNeeded } from '@/data';
+import { Colors } from '@/constants/theme';
 import { AppearanceProvider, useAppearance } from '@/hooks/use-appearance';
 
 SplashScreen.preventAutoHideAsync();
@@ -14,8 +15,22 @@ ensureDataDirectories();
 /** Inside SQLiteProvider + AppearanceProvider so it can read the Settings > Appearance override. */
 function AppContent() {
   const { effectiveScheme } = useAppearance();
+  const palette = Colors[effectiveScheme];
+  const base = effectiveScheme === 'dark' ? DarkTheme : DefaultTheme;
+  // Navigation chrome (headers, back buttons, sheets) uses our palette instead of the stock white/blue.
+  const navigationTheme = {
+    ...base,
+    colors: {
+      ...base.colors,
+      background: palette.background,
+      card: palette.background,
+      text: palette.text,
+      primary: palette.accentText,
+      border: palette.backgroundSelected,
+    },
+  };
   return (
-    <ThemeProvider value={effectiveScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={navigationTheme}>
       <AnimatedSplashOverlay />
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

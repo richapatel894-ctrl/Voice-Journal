@@ -122,7 +122,7 @@ export default function EntriesScreen() {
                 Showing {formatDayHeader(dayFilter)}
               </ThemedText>
               <Pressable onPress={() => setDayFilter(null)} hitSlop={8}>
-                <ThemedText type="smallBold" themeColor="accent">
+                <ThemedText type="smallBold" themeColor="accentText">
                   Clear
                 </ThemedText>
               </Pressable>
@@ -153,7 +153,7 @@ export default function EntriesScreen() {
           </ScrollView>
 
           <View style={styles.filterRow}>
-            <Host matchContents seedColor={theme.accent}>
+            <Host matchContents seedColor={theme.accentText}>
               <Picker
                 label="Emotion"
                 modifiers={[pickerStyle('menu')]}
@@ -167,7 +167,7 @@ export default function EntriesScreen() {
                 ))}
               </Picker>
             </Host>
-            <Host matchContents seedColor={theme.accent}>
+            <Host matchContents seedColor={theme.accentText}>
               <Picker
                 label="Sort"
                 modifiers={[pickerStyle('menu')]}
@@ -199,7 +199,7 @@ export default function EntriesScreen() {
                         <Pressable
                           onPress={() => onDeleteEntry(entry)}
                           style={[styles.deleteAction, { backgroundColor: theme.accent }]}>
-                          <ThemedText type="smallBold" style={{ color: theme.background }}>
+                          <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
                             Delete
                           </ThemedText>
                         </Pressable>
@@ -235,19 +235,19 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   header: { paddingHorizontal: Spacing.four, gap: Spacing.three },
   dayFilterBanner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 32, lineHeight: 40 },
+  title: {},
   search: { borderRadius: Spacing.three, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
   chipRow: { gap: Spacing.two, paddingRight: Spacing.four },
   filterRow: { flexDirection: 'row', gap: Spacing.three },
   list: { padding: Spacing.four, paddingTop: Spacing.three, paddingBottom: BottomTabInset + Spacing.four, gap: Spacing.four },
   section: { gap: Spacing.two },
-  entryList: { gap: Spacing.two },
+  entryList: { gap: 0 },
   emptyState: { paddingVertical: Spacing.six, textAlign: 'center' },
   deleteAction: {
     justifyContent: 'center',
     alignItems: 'center',
     width: 88,
     borderRadius: Spacing.three,
-    marginBottom: Spacing.two,
+    marginVertical: Spacing.one,
   },
 });

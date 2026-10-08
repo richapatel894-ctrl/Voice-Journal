@@ -78,7 +78,7 @@ export function AudioPlayerCard({ audio }: AudioPlayerCardProps) {
         <Pressable
           onPress={() => (status.playing ? player.pause() : player.play())}
           style={[styles.playButton, { backgroundColor: theme.accent }]}>
-          <ThemedText type="smallBold" style={{ color: theme.background }}>
+          <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
             {status.playing ? 'Pause' : 'Play'}
           </ThemedText>
         </Pressable>

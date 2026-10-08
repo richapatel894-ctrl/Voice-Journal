@@ -84,23 +84,17 @@ export default function HomeScreen() {
             <Pressable
               onPress={() => router.push('/recorder')}
               style={[styles.recordButton, { backgroundColor: theme.accent }]}>
-              <ThemedText type="smallBold" style={{ color: theme.background }}>
-                🎙  Record
-              </ThemedText>
+              <ThemedText style={[styles.buttonText, { color: theme.onAccent }]}>🎙  Record</ThemedText>
             </Pressable>
             <Pressable
               onPress={() => router.push('/composer')}
-              style={[styles.writeButton, { borderColor: theme.accent }]}>
-              <ThemedText type="smallBold" themeColor="accent">
-                Write
-              </ThemedText>
+              style={[styles.writeButton, { backgroundColor: theme.backgroundElement }]}>
+              <ThemedText style={styles.buttonText}>Write</ThemedText>
             </Pressable>
           </View>
 
           <View style={styles.todaySection}>
-            <ThemedText type="label" themeColor="textSecondary">
-              Today
-            </ThemedText>
+            <ThemedText type="subtitle">Today</ThemedText>
             {todayEntries.length === 0 ? (
               <ThemedText themeColor="textSecondary" style={styles.emptyState}>
                 Nothing yet today. Speak or write your first thought.
@@ -138,19 +132,23 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: Spacing.three },
   recordButton: {
     flex: 1,
-    paddingVertical: Spacing.three,
-    borderRadius: Spacing.five,
+    paddingVertical: 18,
+    borderRadius: 20,
     alignItems: 'center',
+    shadowColor: '#392E22',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
   writeButton: {
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
-    borderRadius: Spacing.five,
-    borderWidth: 1.5,
+    paddingHorizontal: Spacing.five,
+    paddingVertical: 18,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  todaySection: { gap: Spacing.three },
-  entryList: { gap: Spacing.two },
+  buttonText: { fontSize: 18, lineHeight: 24, fontWeight: 600 },
+  todaySection: { gap: Spacing.two },
+  entryList: { gap: Spacing.one },
   emptyState: { paddingVertical: Spacing.three },
 });

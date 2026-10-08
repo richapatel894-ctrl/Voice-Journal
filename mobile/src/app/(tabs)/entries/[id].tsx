@@ -56,12 +56,12 @@ export default function EntryDetailScreen() {
             <Pressable
               onPress={() => router.push({ pathname: '/composer', params: { id: entry.id } })}
               hitSlop={12}>
-              <ThemedText type="smallBold" themeColor="accent">
+              <ThemedText type="smallBold" themeColor="accentText">
                 Edit
               </ThemedText>
             </Pressable>
             <Pressable onPress={onDelete} hitSlop={12}>
-              <ThemedText type="smallBold" themeColor="accent">
+              <ThemedText type="smallBold" themeColor="accentText">
                 Delete
               </ThemedText>
             </Pressable>
@@ -88,7 +88,7 @@ export default function EntryDetailScreen() {
             {entry.emotions.length > 0 && (
               <View style={styles.chipRow}>
                 {entry.emotions.map((e) => (
-                  <TagChip key={e.emotion} label={e.emotion} selected />
+                  <TagChip key={e.emotion} label={e.emotion} variant="emotion" selected />
                 ))}
               </View>
             )}

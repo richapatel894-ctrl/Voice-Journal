@@ -64,7 +64,7 @@ export function TagEditor({
             returnKeyType="done"
           />
           <Pressable onPress={addTheme} hitSlop={12}>
-            <ThemedText type="smallBold" themeColor="accent">
+            <ThemedText type="smallBold" themeColor="accentText">
               Add
             </ThemedText>
           </Pressable>
@@ -93,7 +93,7 @@ export function TagEditor({
             const disabled = !selected && emotions.length >= MAX_EMOTIONS_PER_ENTRY;
             return (
               <View key={name} style={disabled && styles.disabledChip}>
-                <TagChip label={name} selected={selected} onPress={() => toggleEmotion(name)} />
+                <TagChip label={name} variant="emotion" selected={selected} onPress={() => toggleEmotion(name)} />
               </View>
             );
           })}

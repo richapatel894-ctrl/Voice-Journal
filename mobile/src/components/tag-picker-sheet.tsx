@@ -32,7 +32,7 @@ export function TagPickerSheet({ visible, tags, selected, onToggle, onClose }: T
           <View style={styles.toolbar}>
             <ThemedText type="subtitle">All themes</ThemedText>
             <Pressable onPress={onClose} hitSlop={12}>
-              <ThemedText type="smallBold" themeColor="accent">
+              <ThemedText type="smallBold" themeColor="accentText">
                 Done
               </ThemedText>
             </Pressable>

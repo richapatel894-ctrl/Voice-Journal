@@ -39,7 +39,7 @@ export function JournalingHeatmap({ days, sinceDay, onSelectDay }: JournalingHea
   );
 
   const shadeFor = (count: number) => {
-    if (count === 0) return theme.backgroundElement;
+    if (count === 0) return theme.background;
     const intensity = 0.3 + 0.7 * (count / maxCount);
     return theme.accent + Math.round(intensity * 255).toString(16).padStart(2, '0');
   };
