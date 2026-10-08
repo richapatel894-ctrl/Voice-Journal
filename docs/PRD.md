@@ -162,9 +162,9 @@ The UX decisions above fixed the *requirements* on data (section 10). This secti
 | Decision | Options | UX consequence |
 |---|---|---|
 | **Where entries live** | **Decided: on-device SQLite (`expo-sqlite`).** Audio and photos are files in the app's storage; the database holds only their paths | The phone works alone (section 5, principle 3). SQLite serves the tag, emotion, day, period and text-search queries. |
-| **Transcription** | **Open, user to decide (parked 2026-09-25, no deadline given):** wants Whisper. Options: (a) get an OpenAI key and add it alongside the OpenRouter key (recommended — original design, ~$0.006/min); (b) on-device Whisper via whisper.cpp, no key, offline, adds a ~75–500MB model and a native module; (c) fall back to an OpenRouter audio model (Gemini Flash family), no second key | Recording UI and the "Transcribing..." state are built provider-agnostic so any of the three can be wired in later without changing the UI. |
+| **Transcription** | **Decided (2026-10-08): Whisper (`openai/whisper-1`) through OpenRouter's `/audio/transcriptions` endpoint, using the same OpenRouter key as tagging and summaries.** Replaces the parked options (a separate OpenAI key, on-device whisper.cpp, or a Gemini audio model via chat) | One key for everything. The phone sends the saved m4a as base64; OpenRouter bills per audio second with no markup. Upstream limit is about 60s of processing, which is ample for journal entries. Failure marks the entry `failed` and keeps the audio, with a retry. |
 | **LLM tagging, emotions and summary** | **Decided: LLM-derived, no rule-based tagging. The phone calls OpenRouter directly (no Mac server, no proxy).** The starting model is `openai/gpt-5.6-luna`, as in the current backend; prompt design and result validation are left to implementation | Works on any network. Saving is instant and tagging happens in the background, retried when offline. The emotion map and heatmap are computed on the phone from the stored tags; only tagging and the written summary call the LLM. |
-| **API keys** | **Decided for OpenRouter (tagging, emotions, written summary): read at build time from a git-ignored `mobile/.env.local` (`EXPO_PUBLIC_OPENROUTER_API_KEY`), no in-app screen.** A second key for transcription depends on the option chosen above | Same file, one line per key, both read the same way. |
+| **API keys** | **Decided for OpenRouter (tagging, emotions, written summary): read at build time from a git-ignored `mobile/.env.local` (`EXPO_PUBLIC_OPENROUTER_API_KEY`), no in-app screen.** The same key covers transcription (Whisper via OpenRouter), so no second key is needed | Same file, one line per key, both read the same way. |
 | **Backup or sync** | **Decided: the automatic iPhone backup only. No export in v1 (moved to v2) and no sync between devices.** To verify while building: that the app's database, audio and media files are included in device backups | Trade-off: a lost phone without a backup means a lost journal. |
 | **When iOS suspends the app** | **Decided: after a save, request a short extra background window. Any unfinished transcription or tagging resumes the next time the app opens.** Entries keep their pending state until then | No background-upload system in v1. |
 | **Existing entries** | **Decided: fresh start.** The entries in `data/journal.db` are not imported | The old `data/` folder stays only as a local archive. |
@@ -238,6 +238,7 @@ The app is "done" for v1 when, on my iPhone, I can:
 | 2026-09-20 | The phone calls OpenRouter directly for tagging, emotions and the written summary. The Mac server is not part of the app. |
 | 2026-09-20 | One OpenRouter key does tagging, emotions and the written summary via `openai/gpt-5.6-luna`. |
 | 2026-09-25 | Transcription reopened: user wants Whisper. Parked pending an OpenAI-key decision; frontend build starts without it. |
+| 2026-10-08 | Transcription decided: Whisper via OpenRouter's audio endpoint, one key for everything. No OpenAI key needed. |
 | 2026-09-20 | Architecture pass: on-device SQLite with audio and photos as files; the iPhone backup only, with no export and no sync; a short background window after save with resume on next open; fresh start with no import of old entries. |
 | 2026-09-20 | Charts are custom-drawn inside native chrome (`@expo/ui` has no Swift Charts in SDK 57). |
 | 2026-09-20 | The plan lives in this PRD; the separate requirements doc is retired. |
@@ -262,7 +263,7 @@ The app is "done" for v1 when, on my iPhone, I can:
 
 ## 17. Open questions
 
-- **Transcription provider (parked 2026-09-25):** the user wants Whisper and is deciding between an OpenAI key, on-device Whisper, or an OpenRouter audio model. Frontend build proceeds without this; the recorder and composer are built so the transcription call is a swappable piece.
+- **Transcription provider:** decided 2026-10-08, Whisper via OpenRouter (see the architecture table). Needs `EXPO_PUBLIC_OPENROUTER_API_KEY` in `mobile/.env.local` to actually run.
 - The exact limit on theme tags per entry (currently "about 3") and normalization rules (for example merging near-duplicate tags).
 - Removing the retired `ios/`, `backend/` and `frontend/` code from the repo, and updating the root `README.md`, `package.json` and `docs/TECH_DESIGN.md`, which still describe the old prototype.
 

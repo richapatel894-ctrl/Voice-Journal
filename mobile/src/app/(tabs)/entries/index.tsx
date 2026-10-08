@@ -18,6 +18,8 @@ import {
   deleteEntryFiles,
   emotionCounts,
   listEntries,
+  retryTranscription,
+  onEntryChanged,
   tagCounts,
   type Entry,
   type SortOrder,
@@ -84,6 +86,8 @@ export default function EntriesScreen() {
       load();
     }, [load])
   );
+
+  useFocusEffect(useCallback(() => onEntryChanged(() => void load()), [load]));
 
   const sections = useMemo(() => groupByDay(entries), [entries]);
 
@@ -209,6 +213,7 @@ export default function EntriesScreen() {
                         onPress={() => router.push(`/entries/${entry.id}`)}
                         onEdit={() => router.push({ pathname: '/composer', params: { id: entry.id } })}
                         onDelete={() => onDeleteEntry(entry)}
+                        onRetry={() => void retryTranscription(db, entry.id)}
                       />
                     </Swipeable>
                   ))}

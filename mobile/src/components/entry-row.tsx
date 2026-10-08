@@ -11,14 +11,22 @@ type EntryRowProps = {
   onPress: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  /** Offered in the ⋯ menu when a voice entry's transcription failed. */
+  onRetry?: () => void;
 };
 
-export function EntryRow({ entry, onPress, onEdit, onDelete }: EntryRowProps) {
+export function EntryRow({ entry, onPress, onEdit, onDelete, onRetry }: EntryRowProps) {
   const isTranscribing = entry.kind === 'voice' && entry.transcriptionStatus === 'pending';
-  const preview = isTranscribing ? 'Transcribing…' : entry.text || '(empty entry)';
+  const isFailed = entry.kind === 'voice' && entry.transcriptionStatus === 'failed';
+  const preview = isTranscribing
+    ? 'Transcribing…'
+    : isFailed
+      ? 'Couldn’t transcribe — see ⋯ to retry'
+      : entry.text || '(empty entry)';
 
   const openMenu = () => {
     Alert.alert(entry.kind === 'voice' ? 'Voice entry' : 'Text entry', undefined, [
+      ...(isFailed && onRetry ? [{ text: 'Retry transcription', onPress: onRetry }] : []),
       { text: 'Edit', onPress: onEdit },
       {
         text: 'Delete',
@@ -42,7 +50,7 @@ export function EntryRow({ entry, onPress, onEdit, onDelete }: EntryRowProps) {
         <View style={styles.body}>
           <ThemedText
             type="small"
-            themeColor={isTranscribing ? 'textSecondary' : 'text'}
+            themeColor={isTranscribing || isFailed ? 'textSecondary' : 'text'}
             numberOfLines={2}>
             {preview}
           </ThemedText>

@@ -8,7 +8,7 @@ import { TagChip } from '@/components/tag-chip';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { deleteEntry, deleteEntryFiles, getEntry, type Entry } from '@/data';
+import { deleteEntry, deleteEntryFiles, getEntry, onEntryChanged, retryTranscription, type Entry } from '@/data';
 
 export default function EntryDetailScreen() {
   const db = useSQLiteContext();
@@ -20,6 +20,22 @@ export default function EntryDetailScreen() {
       getEntry(db, id).then(setEntry);
     }, [db, id])
   );
+
+  useFocusEffect(
+    useCallback(
+      () =>
+        onEntryChanged((changed) => {
+          if (changed.id === id) setEntry(changed);
+        }),
+      [id]
+    )
+  );
+
+  const onRetry = () => {
+    // Show "Transcribing…" immediately; processing emits the result when it finishes.
+    setEntry((current) => (current ? { ...current, transcriptionStatus: 'pending' } : current));
+    void retryTranscription(db, id);
+  };
 
   const onDelete = () => {
     Alert.alert('Delete this entry?', 'This cannot be undone.', [
@@ -70,11 +86,22 @@ export default function EntryDetailScreen() {
 
         {entry.audio && <AudioPlayerCard audio={entry.audio} />}
 
-        <ThemedText>
-          {entry.kind === 'voice' && entry.transcriptionStatus === 'pending'
-            ? 'Transcribing…'
-            : entry.text || '(empty entry)'}
-        </ThemedText>
+        {entry.kind === 'voice' && entry.transcriptionStatus === 'failed' ? (
+          <View style={styles.failed}>
+            <ThemedText themeColor="textSecondary">Couldn’t transcribe this entry. Your audio is saved.</ThemedText>
+            <Pressable onPress={onRetry} hitSlop={12}>
+              <ThemedText type="smallBold" themeColor="accent">
+                Retry transcription
+              </ThemedText>
+            </Pressable>
+          </View>
+        ) : (
+          <ThemedText>
+            {entry.kind === 'voice' && entry.transcriptionStatus === 'pending'
+              ? 'Transcribing…'
+              : entry.text || '(empty entry)'}
+          </ThemedText>
+        )}
 
         {(entry.tags.length > 0 || entry.emotions.length > 0) && (
           <View style={styles.tagSection}>
@@ -113,6 +140,7 @@ export default function EntryDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  failed: { gap: Spacing.two },
   container: { flex: 1 },
   content: { padding: Spacing.four, gap: Spacing.four },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

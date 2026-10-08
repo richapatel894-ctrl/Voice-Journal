@@ -16,6 +16,8 @@ import {
   deleteEntryFiles,
   getProfileName,
   listEntries,
+  retryTranscription,
+  onEntryChanged,
   onEntrySaved,
   type Entry,
   type Streak,
@@ -52,6 +54,8 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => onEntrySaved(() => setToast('Saved ✓')), [])
   );
+
+  useFocusEffect(useCallback(() => onEntryChanged(() => void load()), [load]));
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -114,6 +118,7 @@ export default function HomeScreen() {
                     onPress={() => router.push({ pathname: '/composer', params: { id: entry.id } })}
                     onEdit={() => router.push({ pathname: '/composer', params: { id: entry.id } })}
                     onDelete={() => onDeleteEntry(entry)}
+                    onRetry={() => void retryTranscription(db, entry.id)}
                   />
                 ))}
               </View>
