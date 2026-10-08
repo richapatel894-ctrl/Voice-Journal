@@ -2,7 +2,7 @@ import { Chart, Host, Picker, Text as UIText } from '@expo/ui/swift-ui';
 import { pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -32,6 +32,24 @@ type EmotionPoint = { emotion: string; count: number; valence: number; arousal: 
 
 const PERIODS: Period[] = ['3M', '6M', '12M', 'YEAR', 'ALL'];
 
+/** One point per day (average valence) labelled "Oct 8", so the chart's x-axis shows dates, not entry indices. */
+function moodByDay(points: MoodPoint[]): { x: string; y: number }[] {
+  const byDay = new Map<string, number[]>();
+  for (const p of points) byDay.set(p.day, [...(byDay.get(p.day) ?? []), p.valence]);
+  const days = [...byDay.keys()].sort();
+  const multiYear = days.length > 0 && days[0].slice(0, 4) !== days[days.length - 1].slice(0, 4);
+  return days.map((day) => {
+    const [y, m, d] = day.split('-').map(Number);
+    const label = new Date(y, m - 1, d).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      ...(multiYear ? { year: '2-digit' } : {}),
+    });
+    const values = byDay.get(day)!;
+    return { x: label, y: values.reduce((a, b) => a + b, 0) / values.length };
+  });
+}
+
 export default function InsightsScreen() {
   const db = useSQLiteContext();
   const theme = useTheme();
@@ -42,6 +60,7 @@ export default function InsightsScreen() {
   const [snapshot, setSnapshot] = useState<InsightsSnapshot>({ entryCount: 0, topTheme: null, topEmotion: null });
   const [mood, setMood] = useState<MoodPoint[]>([]);
   const [heatmap, setHeatmap] = useState<HeatmapDay[]>([]);
+  const heatmapScroll = useRef<ScrollView>(null);
   const [streak, setStreak] = useState({ current: 0, record: 0 });
 
   const sinceDay = useMemo(() => periodStartDay(period), [period]);
@@ -71,7 +90,7 @@ export default function InsightsScreen() {
   const guidanceEmotion = selectedEmotion ?? snapshot.topEmotion;
   const guidance = guidanceEmotion ? EMOTION_GUIDANCE[guidanceEmotion] : null;
 
-  const chartData = mood.map((point, i) => ({ x: i, y: point.valence }));
+  const chartData = moodByDay(mood);
   const daysJournaling = heatmap.filter((d) => d.count > 0).length;
 
   return (
@@ -173,7 +192,11 @@ export default function InsightsScreen() {
               Journaling heatmap
             </ThemedText>
             <HeatmapSummary days={heatmap} sinceDay={sinceDay} />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              ref={heatmapScroll}
+              onContentSizeChange={() => heatmapScroll.current?.scrollToEnd({ animated: false })}>
               <JournalingHeatmap
                 days={heatmap}
                 sinceDay={sinceDay}
