@@ -19,3 +19,18 @@ export function onEntrySaved(listener: Listener): () => void {
 export function emitEntrySaved(entry: Entry): void {
   for (const listener of listeners) listener(entry);
 }
+
+/**
+ * Background work (transcription, later tagging) finished changing an entry. Separate from the
+ * save event because that one drives the "Saved" toast; this one just tells visible screens to refresh.
+ */
+const changeListeners = new Set<Listener>();
+
+export function onEntryChanged(listener: Listener): () => void {
+  changeListeners.add(listener);
+  return () => changeListeners.delete(listener);
+}
+
+export function emitEntryChanged(entry: Entry): void {
+  for (const listener of changeListeners) listener(entry);
+}

@@ -15,5 +15,6 @@ export * from '@/data/streak';
 export * from '@/data/storage';
 export * from '@/data/save-events';
 export * from '@/data/processing';
+export * from '@/data/transcription';
 
 export { randomUUID as newId } from 'expo-crypto';
