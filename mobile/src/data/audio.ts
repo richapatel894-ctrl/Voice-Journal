@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { toStoredPath } from '@/data/storage';
 import type { AudioRecording } from '@/data/types';
 
 /** Attaches the recorded audio to a voice entry (PRD §8.5: voice entries keep their audio). */
@@ -13,7 +14,7 @@ export async function setEntryAudio(db: SQLiteDatabase, audio: AudioRecording): 
        waveform = excluded.waveform`,
     {
       $entryId: audio.entryId,
-      $filePath: audio.filePath,
+      $filePath: toStoredPath(audio.filePath),
       $durationMs: audio.durationMs,
       $waveform: JSON.stringify(audio.waveform),
     }

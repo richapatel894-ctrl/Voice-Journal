@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { resolveStoredPath } from '@/data/storage';
 import type {
   AttachmentType,
   Entry,
@@ -85,7 +86,7 @@ async function hydrateEntries(db: SQLiteDatabase, rows: EntryRow[]): Promise<Ent
     audio: (() => {
       const a = audioRows.find((r) => r.entry_id === row.id);
       return a
-        ? { entryId: a.entry_id, filePath: a.file_path, durationMs: a.duration_ms, waveform: JSON.parse(a.waveform) }
+        ? { entryId: a.entry_id, filePath: resolveStoredPath(a.file_path) ?? a.file_path, durationMs: a.duration_ms, waveform: JSON.parse(a.waveform) }
         : null;
     })(),
     attachments: attachmentRows
@@ -94,8 +95,8 @@ async function hydrateEntries(db: SQLiteDatabase, rows: EntryRow[]): Promise<Ent
         id: a.id,
         entryId: a.entry_id,
         type: a.type,
-        filePath: a.file_path,
-        thumbnailPath: a.thumbnail_path,
+        filePath: resolveStoredPath(a.file_path),
+        thumbnailPath: resolveStoredPath(a.thumbnail_path),
         fileSize: a.file_size,
         durationMs: a.duration_ms,
         url: a.url,

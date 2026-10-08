@@ -2,7 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 export const DATABASE_NAME = 'voice-journal.db';
 
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 
 /**
  * Runs once via `SQLiteProvider`'s `onInit`. Uses `PRAGMA user_version` to
@@ -84,6 +84,19 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       );
     `);
     currentDbVersion = 1;
+  }
+
+  if (currentDbVersion === 1) {
+    // Store file paths relative to Documents/ (the container UUID in absolute URIs changes on
+    // reinstall). Strips everything up to and including the first '/Documents/'.
+    const relative = (col: string) =>
+      `${col} = substr(${col}, instr(${col}, '/Documents/') + 11) WHERE ${col} LIKE 'file://%/Documents/%'`;
+    await db.execAsync(`
+      UPDATE audio_recordings SET ${relative('file_path')};
+      UPDATE attachments SET ${relative('file_path')};
+      UPDATE attachments SET ${relative('thumbnail_path')};
+    `);
+    currentDbVersion = 2;
   }
 
   await db.execAsync(`PRAGMA user_version = ${currentDbVersion}`);

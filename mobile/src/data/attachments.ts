@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { resolveStoredPath, toStoredPath } from '@/data/storage';
 import type { Attachment, AttachmentType } from '@/data/types';
 
 type AttachmentRow = {
@@ -20,8 +21,8 @@ function fromRow(row: AttachmentRow): Attachment {
     id: row.id,
     entryId: row.entry_id,
     type: row.type,
-    filePath: row.file_path,
-    thumbnailPath: row.thumbnail_path,
+    filePath: resolveStoredPath(row.file_path),
+    thumbnailPath: resolveStoredPath(row.thumbnail_path),
     fileSize: row.file_size,
     durationMs: row.duration_ms,
     url: row.url,
@@ -43,8 +44,8 @@ export async function addAttachment(
       $id: attachment.id,
       $entryId: attachment.entryId,
       $type: attachment.type,
-      $filePath: attachment.filePath,
-      $thumbnailPath: attachment.thumbnailPath,
+      $filePath: toStoredPath(attachment.filePath),
+      $thumbnailPath: toStoredPath(attachment.thumbnailPath),
       $fileSize: attachment.fileSize,
       $durationMs: attachment.durationMs,
       $url: attachment.url,

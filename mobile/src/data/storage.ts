@@ -11,6 +11,24 @@ export const audioDirectory = new Directory(Paths.document, 'audio');
 export const attachmentsDirectory = new Directory(Paths.document, 'attachments');
 export const thumbnailsDirectory = new Directory(Paths.document, 'thumbnails');
 
+/**
+ * The app container's UUID changes on reinstall/update, so absolute file URIs saved in the
+ * database go stale. The database stores paths relative to the Documents directory
+ * (e.g. `audio/<uuid>.m4a`); these helpers convert at the data-layer boundary so the rest of
+ * the app keeps working with full URIs.
+ */
+export function toStoredPath(uri: string | null): string | null {
+  if (!uri) return uri;
+  const root = Paths.document.uri.endsWith('/') ? Paths.document.uri : `${Paths.document.uri}/`;
+  return uri.startsWith(root) ? uri.slice(root.length) : uri;
+}
+
+export function resolveStoredPath(stored: string | null): string | null {
+  if (!stored || stored.includes('://')) return stored;
+  const root = Paths.document.uri.endsWith('/') ? Paths.document.uri : `${Paths.document.uri}/`;
+  return `${root}${stored}`;
+}
+
 export function ensureDataDirectories(): void {
   for (const dir of [audioDirectory, attachmentsDirectory, thumbnailsDirectory]) {
     if (!dir.exists) dir.create({ intermediates: true });
