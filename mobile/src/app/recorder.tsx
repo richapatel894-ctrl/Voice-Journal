@@ -1,6 +1,7 @@
 import {
   AudioModule,
   RecordingPresets,
+  setAudioModeAsync,
   useAudioRecorder,
   useAudioRecorderState,
 } from 'expo-audio';
@@ -69,6 +70,8 @@ export default function RecorderScreen() {
         setPermissionDenied(true);
         return;
       }
+      // iOS refuses to record until the audio session is switched into recording mode.
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       await recorder.prepareToRecordAsync();
       recorder.record();
     })();
@@ -80,8 +83,12 @@ export default function RecorderScreen() {
     }
   }, [state.isRecording, state.metering]);
 
+  // Recording mode routes audio to the earpiece; switch back so playback uses the speaker.
+  const leaveRecordingMode = () => setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+
   const discard = async () => {
     if (recorder.isRecording) await recorder.stop();
+    await leaveRecordingMode();
     router.back();
   };
 
@@ -98,6 +105,7 @@ export default function RecorderScreen() {
     const isFirstEntryToday = !streakBefore.daysWithEntries.has(localDayString());
 
     await recorder.stop();
+    await leaveRecordingMode();
     const sourceUri = recorder.uri;
     if (!sourceUri) {
       setSaving(false);
