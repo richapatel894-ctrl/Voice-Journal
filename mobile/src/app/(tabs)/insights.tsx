@@ -3,7 +3,7 @@ import { pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EmotionMap } from '@/components/emotion-map';
@@ -17,14 +17,19 @@ import {
   PERIOD_LABELS,
   computeStreak,
   emotionMapStats,
+  generatePeriodSummary,
+  getPeriodSummary,
+  hasLlmKey,
   heatmapData,
   insightsSnapshot,
+  isSummaryStale,
   moodOverTime,
   periodStartDay,
   type HeatmapDay,
   type InsightsSnapshot,
   type MoodPoint,
   type Period,
+  type PeriodSummary,
 } from '@/data';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -62,11 +67,33 @@ export default function InsightsScreen() {
   const [heatmap, setHeatmap] = useState<HeatmapDay[]>([]);
   const heatmapScroll = useRef<ScrollView>(null);
   const [streak, setStreak] = useState({ current: 0, record: 0 });
+  const [summary, setSummary] = useState<PeriodSummary | null>(null);
+  const [summaryState, setSummaryState] = useState<'idle' | 'loading' | 'error'>('idle');
 
   const sinceDay = useMemo(() => periodStartDay(period), [period]);
 
+  const refreshSummary = useCallback(async () => {
+    setSummaryState('loading');
+    try {
+      const fresh = await generatePeriodSummary(db, period, sinceDay);
+      setSummary(fresh);
+      setSummaryState('idle');
+    } catch {
+      setSummaryState('error'); // the last cached summary, if any, stays on screen
+    }
+  }, [db, period, sinceDay]);
+
   useFocusEffect(
     useCallback(() => {
+      // Show the cached summary straight away; write a new one only if entries changed since.
+      getPeriodSummary(db, period)
+        .then((cached) => {
+          setSummary(cached);
+          return isSummaryStale(db, period, sinceDay);
+        })
+        .then((stale) => {
+          if (stale && hasLlmKey()) void refreshSummary();
+        });
       Promise.all([
         emotionMapStats(db, sinceDay),
         insightsSnapshot(db, sinceDay),
@@ -84,7 +111,7 @@ export default function InsightsScreen() {
         }
       });
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [db, sinceDay])
+    }, [db, period, sinceDay, refreshSummary])
   );
 
   const guidanceEmotion = selectedEmotion ?? snapshot.topEmotion;
@@ -119,9 +146,37 @@ export default function InsightsScreen() {
               Summary
             </ThemedText>
             <ThemedView type="backgroundElement" style={styles.card}>
-              <ThemedText themeColor="textSecondary">
-                A written summary needs the AI connection, which is not set up yet.
-              </ThemedText>
+              {summary ? (
+                <ThemedText>{summary.text}</ThemedText>
+              ) : (
+                <ThemedText themeColor="textSecondary">
+                  {summaryState === 'loading'
+                    ? 'Writing your summary…'
+                    : summaryState === 'error'
+                      ? 'Couldn’t write the summary. Check your connection and try again.'
+                      : snapshot.entryCount === 0
+                        ? 'Write or record a few entries and your summary will appear here.'
+                        : 'No summary yet.'}
+                </ThemedText>
+              )}
+              {(summary || summaryState === 'error' || snapshot.entryCount > 0) && (
+                <View style={styles.summaryFooter}>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {summary && summaryState === 'loading'
+                      ? 'Refreshing…'
+                      : summary && summaryState === 'error'
+                        ? 'Couldn’t refresh — showing the last summary'
+                        : summary
+                          ? `Updated ${new Date(summary.generatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+                          : ''}
+                  </ThemedText>
+                  <Pressable onPress={refreshSummary} disabled={summaryState === 'loading'} hitSlop={12}>
+                    <ThemedText type="smallBold" themeColor="accent">
+                      {summary ? 'Refresh' : 'Write summary'}
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              )}
             </ThemedView>
           </View>
 
@@ -218,5 +273,6 @@ const styles = StyleSheet.create({
   section: { gap: Spacing.two },
   card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
   guidance: { gap: Spacing.one, marginTop: Spacing.one },
+  summaryFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.one },
   chartHost: { height: 160 },
 });

@@ -1,9 +1,8 @@
 import { EMOTION_CATALOG, EMOTION_NAMES } from '@/data/emotion-catalog';
 import { MAX_EMOTIONS_PER_ENTRY } from '@/data/emotions';
+import { callLlm, LLM_MODEL, LlmError } from '@/data/llm';
 
-const CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
-/** Same model the original backend used (PRD §11). */
-export const TAGGING_MODEL = 'openai/gpt-5.6-luna';
+export const TAGGING_MODEL = LLM_MODEL;
 
 /** The seed vocabulary for themes, so names stay consistent (PRD §9). Themes are still open-ended. */
 export const THEME_CATALOG = [
@@ -25,8 +24,6 @@ export type AutoTags = {
   themes: { tag: string; confidence: number | null }[];
   emotions: { emotion: string; valence: number; arousal: number }[];
 };
-
-export class TaggingError extends Error {}
 
 function buildPrompt(text: string, knownThemes: string[]): string {
   return `You are a journaling assistant. Read this journal entry and return ONLY a JSON object, with no explanation and no markdown.
@@ -87,42 +84,18 @@ export function parseAutoTags(raw: unknown, knownThemes: string[]): AutoTags {
 }
 
 /**
- * Asks the LLM (via OpenRouter) for themes and emotions for an entry's text. Throws
- * `TaggingError` on network/HTTP/format failures so the caller can mark the entry `failed`.
+ * Asks the LLM (via OpenRouter) for themes and emotions for an entry's text. Throws on
+ * network/HTTP/format failures so the caller can mark the entry `failed`.
  * `knownThemes` is the seed catalog plus themes already in use, to keep names consistent.
  */
 export async function tagEntryText(text: string, knownThemes: string[]): Promise<AutoTags> {
-  const apiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
-  if (!apiKey) throw new TaggingError('No OpenRouter key configured');
-
-  let response: Response;
-  try {
-    response = await fetch(CHAT_URL, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: TAGGING_MODEL,
-        messages: [{ role: 'user', content: buildPrompt(text, knownThemes) }],
-        response_format: { type: 'json_object' },
-        max_tokens: 800,
-      }),
-    });
-  } catch {
-    throw new TaggingError('Network request failed');
-  }
-  if (!response.ok) {
-    if (__DEV__) console.warn(`[tagging] HTTP ${response.status}: ${(await response.text()).slice(0, 300)}`);
-    throw new TaggingError(`Tagging failed (${response.status})`);
-  }
-
-  const body = (await response.json()) as { choices?: { message?: { content?: string } }[] };
-  const content = body.choices?.[0]?.message?.content ?? '';
+  const content = await callLlm({ prompt: buildPrompt(text, knownThemes), json: true, maxTokens: 800 });
   try {
     // Models sometimes wrap JSON in a code fence even when told not to.
     const json = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
     return parseAutoTags(JSON.parse(json), knownThemes);
   } catch {
     if (__DEV__) console.warn('[tagging] Could not parse model output');
-    throw new TaggingError('Unreadable tagging response');
+    throw new LlmError('Unreadable tagging response');
   }
 }
