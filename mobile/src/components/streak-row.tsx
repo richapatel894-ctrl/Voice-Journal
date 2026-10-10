@@ -1,3 +1,4 @@
+import { useIsFocused } from 'expo-router';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
@@ -30,10 +31,11 @@ type StreakRowProps = {
 function Heart({ filled, beating }: { filled: boolean; beating: boolean }) {
   const theme = useTheme();
   const reduced = useReducedMotion();
+  const focused = useIsFocused();
   const scale = useSharedValue(1);
 
   useEffect(() => {
-    if (!beating || reduced) return;
+    if (!beating || reduced || !focused) return;
     // two quick beats, then a rest, like a heartbeat
     scale.value = withRepeat(
       withSequence(
@@ -46,7 +48,7 @@ function Heart({ filled, beating }: { filled: boolean; beating: boolean }) {
       -1
     );
     return () => cancelAnimation(scale);
-  }, [beating, reduced, scale]);
+  }, [beating, reduced, focused, scale]);
 
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 

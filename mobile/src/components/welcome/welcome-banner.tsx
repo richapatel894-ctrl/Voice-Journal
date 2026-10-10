@@ -1,3 +1,4 @@
+import { useIsFocused } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -27,6 +28,8 @@ type WelcomeBannerProps = {
  */
 export function WelcomeBanner({ name, choice, weather, onNextQuote, onDevPreview, onDevWeather }: WelcomeBannerProps) {
   const [width, setWidth] = useState(0);
+  // Tabs stay mounted behind each other; drawing the animated scene only while Home is showing keeps the other tabs smooth.
+  const focused = useIsFocused();
   const night = choice.timeOfDay === 'night';
   const quote = findQuote(choice.timeOfDay, choice.quoteId);
   const copy = GREETING[choice.timeOfDay];
@@ -36,7 +39,7 @@ export function WelcomeBanner({ name, choice, weather, onNextQuote, onDevPreview
 
   return (
     <Pressable style={styles.card} onLongPress={onDevPreview} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      {width > 0 && (
+      {width > 0 && focused && (
         <Scene
           key={`${choice.timeOfDay}-${choice.look}`}
           time={choice.timeOfDay}
