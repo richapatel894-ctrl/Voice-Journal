@@ -11,7 +11,7 @@ import { HeatmapSummary, JournalingHeatmap } from '@/components/journaling-heatm
 import { StatTiles } from '@/components/stat-tiles';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { BottomTabInset, Spacing } from '@/constants/theme';
 import {
   EMOTION_GUIDANCE,
   PERIOD_LABELS,
@@ -284,7 +284,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
   title: { fontSize: 32, lineHeight: 40, paddingHorizontal: Spacing.four },
-  content: { padding: Spacing.four, gap: Spacing.five },
+  // Extra room at the bottom so the last section can scroll clear of the floating tab bar.
+  content: { padding: Spacing.four, paddingBottom: BottomTabInset + Spacing.six, gap: Spacing.five },
   section: { gap: Spacing.two },
   card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
   guidance: { gap: Spacing.one, marginTop: Spacing.one },
