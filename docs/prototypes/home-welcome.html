@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice Journal – Home welcome prototype</title>
+<style>
+  :root { --pink:#D9567B; --ink:#2A1F1C; --muted:#7A6F68; --card:rgba(255,255,255,.55); }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:#e9e4dc; font-family:-apple-system,"SF Pro Text",system-ui,sans-serif; color:var(--ink);
+         display:flex; flex-direction:column; align-items:center; gap:16px; padding:20px 12px 40px; }
+  .controls { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:460px; }
+  .controls button { border:1.5px solid var(--pink); background:#fff; color:var(--pink); font-weight:600; padding:8px 14px; border-radius:999px; cursor:pointer; font-size:14px; }
+  .controls button.on { background:var(--pink); color:#fff; }
+  .hint { font-size:13px; color:#6b625b; text-align:center; max-width:420px; }
+
+  /* the "phone" */
+  .phone { width:402px; max-width:100%; height:874px; border-radius:44px; overflow:hidden; position:relative; box-shadow:0 20px 60px rgba(0,0,0,.25);
+           background:var(--bg); color:var(--fg); transition:background 1.2s ease, color 1.2s ease; padding:56px 20px 0; display:flex; flex-direction:column; gap:14px; }
+  .phone[data-time=morning]   { --bg:#FFF3DC; --fg:#2A1F1C; --sub:#7A6F68; --tile:rgba(255,255,255,.6); }
+  .phone[data-time=afternoon] { --bg:#FFF9E3; --fg:#2A1F1C; --sub:#7A6F68; --tile:rgba(255,255,255,.65); }
+  .phone[data-time=sunset]    { --bg:#FBE0D3; --fg:#3A2420; --sub:#8A6258; --tile:rgba(255,255,255,.5); }
+  .phone[data-time=night]     { --bg:#1E2240; --fg:#F2EEE6; --sub:#B3B0C8; --tile:rgba(255,255,255,.08); }
+
+  .streak { display:flex; flex-direction:column; gap:8px; }
+  .streak .label { font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--sub); font-weight:600; }
+  .days { display:flex; justify-content:space-between; }
+  .day { display:flex; flex-direction:column; align-items:center; gap:4px; font-size:11px; color:var(--sub); }
+  .heart { width:30px; height:30px; display:block; }
+  .heart path { fill:var(--tile); stroke:var(--sub); stroke-opacity:.25; stroke-width:1.2; transition:fill .4s; }
+  .heart.on path { fill:var(--pink); stroke:#B93A60; stroke-opacity:1; }
+  .heart.today { animation:beat 1.6s ease-in-out infinite; transform-origin:center; }
+  @keyframes beat { 0%,100% { transform:scale(1); } 14% { transform:scale(1.18); } 28% { transform:scale(1); } 42% { transform:scale(1.12); } 70% { transform:scale(1); } }
+
+  /* the scene */
+  .scene-card { position:relative; border-radius:28px; overflow:hidden; height:290px; flex:none; }
+  .quote-in { position:absolute; left:12px; right:12px; bottom:12px; z-index:2; cursor:pointer; padding:10px 14px; border-radius:18px;
+              background:rgba(255,255,255,.62); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); color:#2A1F1C; transition:background 1.2s, color 1.2s; }
+  .quote-in q { display:block; font:italic 500 15px/1.32 "New York",Georgia,serif; quotes:"“" "”"; }
+  .quote-in small { display:block; margin-top:3px; font-size:11px; opacity:.7; }
+  .phone[data-time=sunset] .quote-in { background:rgba(255,246,238,.66); }
+  .phone[data-time=night] .quote-in { background:rgba(20,23,51,.58); color:#F2EEE6; }
+  .scene-card svg { position:absolute; inset:0; width:100%; height:100%; }
+  .greeting { position:absolute; left:18px; top:14px; right:18px; z-index:2; }
+  .greeting h1 { font:600 30px/1.1 "New York","Iowan Old Style",Georgia,serif; margin:0; }
+  .greeting p { margin:4px 0 0; font-size:14px; color:var(--sub); }
+
+
+  .actions { display:flex; gap:12px; flex:none; }
+  .actions .rec { flex:1; background:var(--pink); color:#fff; border:0; border-radius:999px; padding:18px; font-size:18px; font-weight:700; box-shadow:0 8px 20px rgba(217,86,123,.35); }
+  .actions .wr { width:110px; background:transparent; color:var(--pink); border:2px solid var(--pink); border-radius:999px; font-size:17px; font-weight:700; }
+  .today { font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--sub); font-weight:600; margin-top:6px; }
+  .empty { background:var(--tile); border-radius:20px; padding:16px; color:var(--sub); font-size:15px; }
+
+  /* ---- scene animation ---- */
+  .sky { transition:opacity 1.2s ease; }
+  svg .hand { filter:url(#wobble); }
+  .rays { transform-box:fill-box; transform-origin:center; animation:spin 60s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .sun { transform-box:fill-box; transform-origin:center; }
+
+  .scene[data-time=morning] .sun   { animation:rise 3.4s cubic-bezier(.22,.8,.3,1) 2 forwards; }
+  .scene[data-time=afternoon] .sun { transform:translateY(-34px); }
+  .scene[data-time=afternoon] .glow { animation:pulse 2.6s ease-in-out infinite; }
+  .scene[data-time=afternoon] .rays { animation-duration:30s; }
+  .scene[data-time=sunset] .sun    { animation:set 3.6s cubic-bezier(.4,0,.6,1) 2 forwards; }
+  @keyframes rise { from { transform:translateY(190px); } to { transform:translateY(-6px); } }
+  @keyframes set  { from { transform:translateY(-6px); } to { transform:translateY(150px); } }
+  @keyframes pulse { 0%,100% { opacity:.45; transform:scale(1); } 50% { opacity:.9; transform:scale(1.12); } }
+  .glow { transform-box:fill-box; transform-origin:center; opacity:.5; }
+
+  .cloud { animation:drift 28s linear infinite; }
+  .cloud.c2 { animation-duration:40s; animation-delay:-14s; }
+  @keyframes drift { from { transform:translateX(-120px); } to { transform:translateX(420px); } }
+
+  .star { transform-box:fill-box; transform-origin:center; animation:twinkle 2.4s ease-in-out infinite; }
+  @keyframes twinkle { 0%,100% { opacity:.25; transform:scale(.7); } 50% { opacity:1; transform:scale(1.15); } }
+  .moon { animation:float 6s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
+
+  /* which layers show in which scene */
+  .only-day, .only-night, .only-sunset { transition:opacity 1.2s; }
+  .scene[data-time=night] .only-day, .scene[data-time=night] .sun-group { opacity:0; }
+  .scene:not([data-time=night]) .only-night { opacity:0; }
+  .scene[data-time=sunset] .only-day-clouds { opacity:.0; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation-duration:0.001s !important; animation-iteration-count:1 !important; } }
+
+  /* mascots */
+  .masc { width:60px; height:60px; flex:none; }
+  .entry { display:flex; gap:12px; align-items:center; background:var(--tile); border-radius:20px; padding:12px 14px; }
+  .entry .meta { font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--sub); font-weight:600; }
+  .entry .txt { font-size:15px; line-height:1.3; margin-top:2px; }
+  .entry .feels { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+  .pill { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; background:rgba(217,86,123,.14); color:var(--pink); padding:2px 8px 2px 4px; border-radius:999px; }
+  .pill svg { width:18px; height:18px; }
+  .phone[data-time=night] .pill { background:rgba(255,167,192,.18); color:#FFA7C0; }
+  .pop { animation:pop .7s cubic-bezier(.3,1.6,.5,1) both; }
+  @keyframes pop { 0% { transform:scale(0) rotate(-20deg); opacity:0; } 100% { transform:scale(1) rotate(0); opacity:1; } }
+  .toast { position:absolute; left:50%; bottom:24px; transform:translate(-50%,40px); opacity:0; background:#2A1F1C; color:#fff; padding:10px 16px; border-radius:999px; font-size:14px; font-weight:600; transition:all .35s; pointer-events:none; }
+  .toast.show { transform:translate(-50%,0); opacity:1; }
+  .gallery { width:402px; max-width:100%; background:#fff; border-radius:24px; padding:16px; display:grid; grid-template-columns:repeat(5,1fr); gap:10px 4px; }
+  .gallery h3 { grid-column:1/-1; margin:0 0 2px; font-size:14px; }
+  .gallery div { text-align:center; font-size:11px; color:#6b625b; }
+  .gallery svg { width:56px; height:56px; display:block; margin:0 auto 2px; }
+</style>
+</head>
+<body>
+
+<div class="controls" id="controls"></div>
+<div class="hint">Prototype only (not in the app). Tap a time of day to preview it. Tap the quote card for another one. <b>Replay</b> restarts the animation.</div>
+
+<div class="phone" id="phone" data-time="morning">
+  <div class="streak">
+    <div class="label">🔥 3-day streak</div>
+    <div class="days" id="days"></div>
+  </div>
+
+  <div class="scene-card">
+    <svg class="scene" id="scene" data-time="morning" viewBox="0 0 360 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <filter id="wobble"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+        <linearGradient id="g-morning" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE7B0"/><stop offset="1" stop-color="#FFF6E2"/></linearGradient>
+        <linearGradient id="g-afternoon" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFE6FA"/><stop offset="1" stop-color="#FFF7D6"/></linearGradient>
+        <linearGradient id="g-sunset" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6A5A0"/><stop offset=".55" stop-color="#FFC48A"/><stop offset="1" stop-color="#FFE3B3"/></linearGradient>
+        <linearGradient id="g-night" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#141733"/><stop offset="1" stop-color="#2D3560"/></linearGradient>
+        <radialGradient id="glowg"><stop offset="0" stop-color="#FFE27A" stop-opacity=".9"/><stop offset="1" stop-color="#FFE27A" stop-opacity="0"/></radialGradient>
+        <symbol id="cloud" viewBox="0 0 120 56"><path class="hand" d="M18 46 C4 46 2 28 18 27 C18 12 40 8 48 20 C56 6 84 8 86 26 C106 22 116 44 98 46 Z" stroke-width="3" stroke-linejoin="round"/></symbol>
+        <symbol id="star" viewBox="0 0 20 20"><path d="M10 1 L12 8 L19 10 L12 12 L10 19 L8 12 L1 10 L8 8 Z" fill="#FFF3B0"/></symbol>
+      </defs>
+
+      <!-- sky layers (cross-fade) -->
+      <rect class="sky" width="360" height="300" fill="url(#g-morning)"   id="sky-morning"/>
+      <rect class="sky" width="360" height="300" fill="url(#g-afternoon)" id="sky-afternoon" opacity="0"/>
+      <rect class="sky" width="360" height="300" fill="url(#g-sunset)"    id="sky-sunset" opacity="0"/>
+      <rect class="sky" width="360" height="300" fill="url(#g-night)"     id="sky-night" opacity="0"/>
+
+      <!-- night: stars + moon -->
+      <g class="only-night" id="nightLayer">
+        <g id="stars"></g>
+        <g class="moon">
+          <circle cx="280" cy="86" r="46" fill="#FFF3B0" opacity=".12"/>
+          <mask id="crescent"><rect x="230" y="30" width="100" height="110" fill="#000"/><circle cx="278" cy="86" r="32" fill="#fff"/><circle cx="292" cy="76" r="27" fill="#000"/></mask>
+          <g mask="url(#crescent)"><circle class="hand" cx="278" cy="86" r="32" fill="#FFF0A8" stroke="#F3D96B" stroke-width="3"/></g>
+        </g>
+      </g>
+
+      <!-- sun (rises / sits / sets) -->
+      <g class="sun-group" transform="translate(76 22)">
+        <g class="sun">
+          <circle class="glow" cx="180" cy="150" r="96" fill="url(#glowg)"/>
+          <g class="rays hand" stroke="#F2A33A" stroke-width="5" stroke-linecap="round" id="rays"></g>
+          <circle class="hand" cx="180" cy="150" r="44" fill="#FFCF45" stroke="#F2A33A" stroke-width="4"/>
+          <g class="hand">
+            <circle cx="166" cy="145" r="3.6" fill="#5B3A1E"/><circle cx="194" cy="145" r="3.6" fill="#5B3A1E"/>
+            <path d="M165 158 Q180 172 195 158" stroke="#5B3A1E" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+            <circle cx="158" cy="157" r="5.5" fill="#FF9C9C" opacity=".7"/><circle cx="202" cy="157" r="5.5" fill="#FF9C9C" opacity=".7"/>
+          </g>
+        </g>
+      </g>
+
+      <!-- clouds -->
+      <g class="only-day-clouds">
+        <g class="cloud"    ><use href="#cloud" x="0" y="40" width="96" height="46" fill="#fff" stroke="#C9D8E4" class="cl-day"/></g>
+        <g class="cloud c2" ><use href="#cloud" x="0" y="120" width="70" height="34" fill="#fff" stroke="#C9D8E4" class="cl-day"/></g>
+      </g>
+
+      <!-- hills (ground) -->
+      <path class="hand" id="hill2" d="M-10 262 Q80 222 170 248 T370 236 V310 H-10 Z" fill="#B7DB9E" stroke="#8DB872" stroke-width="3"/>
+      <path class="hand" id="hill1" d="M-10 282 Q100 252 200 274 T370 268 V310 H-10 Z" fill="#9CCB84" stroke="#7DAE64" stroke-width="3"/>
+    </svg>
+    <div class="quote-in" id="quote" title="Tap for another"><q id="qtext"></q><small id="qby"></small></div>
+    <div class="greeting"><h1 id="hello" style="font-size:27px;max-width:170px">Good morning, Richa</h1><p id="sub">A fresh page is waiting.</p></div>
+  </div>
+
+  <div class="actions"><button class="rec">🎙  Record</button><button class="wr">Write</button></div>
+    <div id="entries"></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<div class="controls"><button id="saveBtn">＋ Simulate saving an entry</button></div>
+<div class="gallery" id="gallery"><h3>The emotion crew (original designs, first draft)</h3></div>
+
+<script>
+const SCENES = {
+  morning:  { hello:'Good morning', sub:'A fresh page is waiting.', prompt:'What do you want today to feel like?',
+    quotes:[["Well begun is half done.","Aristotle (attrib.)"],["Do what you can, with what you have, where you are.","Theodore Roosevelt"],["Begin anywhere.","John Cage"],["Every day is a new beginning.","Placeholder"]]},
+  afternoon:{ hello:'Good afternoon', sub:'Keep the momentum going.', prompt:'What is one thing going well so far?',
+    quotes:[["Fall seven times, stand up eight.","Japanese proverb"],["It always seems impossible until it's done.","Nelson Mandela (attrib.)"],["Courage doesn't always roar.","Mary Anne Radmacher"],["Small steps still move you forward.","Placeholder"]]},
+  sunset:   { hello:'Good evening', sub:'The day is settling down.', prompt:'What do you want to remember about today?',
+    quotes:[["Every sunset is an opportunity to reset.","Richie Norton"],["Let the day end the way it needs to.","Placeholder"],["You did what you could today. That counts.","Placeholder"],["Not all who wander are lost.","J.R.R. Tolkien"]]},
+  night:    { hello:'Good night', sub:'Time to let the day go.', prompt:'What are you grateful for tonight?',
+    quotes:[["The night is more alive and more richly colored than the day.","Vincent van Gogh"],["Gratitude turns what we have into enough.","Placeholder"],["Tomorrow is a blank page.","Placeholder"],["Rest is part of the work.","Placeholder"]]}
+};
+const ORDER = ['morning','afternoon','sunset','night'];
+const LABEL = { morning:'🌅 Morning', afternoon:'☀️ Afternoon', sunset:'🌇 Sunset', night:'🌙 Night' };
+const SKY = { morning:'sky-morning', afternoon:'sky-afternoon', sunset:'sky-sunset', night:'sky-night' };
+const HILL = { morning:['#B7DB9E','#9CCB84','#8DB872','#7DAE64'], afternoon:['#A8D68C','#8CC572','#7DB562','#6EA855'], sunset:['#9B6F8E','#7C557A','#85607F','#684868'], night:['#2D3660','#232B50','#3A4575','#303A66'] };
+
+const phone = document.getElementById('phone'), scene = document.getElementById('scene');
+let current = 'auto', qi = 0;
+
+function autoScene(d=new Date()){ const h=d.getHours(); return h>=5&&h<11?'morning':h>=11&&h<16?'afternoon':h>=16&&h<19?'sunset':'night'; }
+
+// controls
+const controls = document.getElementById('controls');
+['auto',...ORDER].forEach(k=>{ const b=document.createElement('button'); b.textContent = k==='auto' ? '⏱ Auto (now)' : LABEL[k]; b.dataset.k=k; b.onclick=()=>{ current=k; qi=0; render(true); }; controls.appendChild(b); });
+const replay=document.createElement('button'); replay.textContent='↻ Replay'; replay.onclick=()=>render(true); controls.appendChild(replay);
+
+// build rays + stars + streak
+const rays=document.getElementById('rays'); for(let i=0;i<14;i++){ const a=i*(360/14)*Math.PI/180, r1=54, r2=i%2?70:78; const l=document.createElementNS('http://www.w3.org/2000/svg','line'); l.setAttribute('x1',180+Math.cos(a)*r1); l.setAttribute('y1',150+Math.sin(a)*r1); l.setAttribute('x2',180+Math.cos(a)*r2); l.setAttribute('y2',150+Math.sin(a)*r2); rays.appendChild(l); }
+const stars=document.getElementById('stars'); let seed=7; const rnd=()=> (seed=(seed*9301+49297)%233280)/233280;
+for(let i=0;i<26;i++){ const u=document.createElementNS('http://www.w3.org/2000/svg','use'); const s=7+rnd()*11; u.setAttribute('href','#star'); u.setAttribute('x',rnd()*340); u.setAttribute('y',rnd()*190); u.setAttribute('width',s); u.setAttribute('height',s); u.setAttribute('class','star'); u.style.animationDelay=(-rnd()*2.4)+'s'; u.style.animationDuration=(1.8+rnd()*2.2)+'s'; stars.appendChild(u); }
+const HEART='M12 21s-7.2-4.7-9.6-9.4C.7 8.2 2.6 4.4 6.4 4.4c2 0 3.8 1.2 5.6 3.3 1.8-2.1 3.6-3.3 5.6-3.3 3.8 0 5.7 3.8 4 7.2C19.2 16.3 12 21 12 21z';
+const days=document.getElementById('days'); 'SMTWTFS'.split('').forEach((d,i)=>{ const e=document.createElement('div'); e.className='day'; e.innerHTML=`<svg class="heart ${i>=3&&i<=4?'on':''} ${i===4?'today':''}" viewBox="0 0 24 24"><path d="${HEART}"/></svg>${d}`; days.appendChild(e); });
+
+// ---- emotion mascots (original blobs; one face per emotion) ----
+const BODY='M32 5 C49 5 58 20 57 37 C56 53 45 60 32 60 C18 60 8 52 8 36 C8 20 15 5 32 5Z';
+const MASC = {
+  Happy:       { c:'#FFD54A', d:'#E0A800', eyes:'dots',   mouth:'<path d="M20 38 Q32 52 44 38 Q32 43 20 38Z" fill="#7A3B12" stroke="#7A3B12" stroke-width="2" stroke-linejoin="round"/>', extra:'<circle cx="17" cy="38" r="4.5" fill="#FF9C9C" opacity=".7"/><circle cx="47" cy="38" r="4.5" fill="#FF9C9C" opacity=".7"/>' },
+  Excited:     { c:'#FF9F45', d:'#D9731A', eyes:'wide',   mouth:'<ellipse cx="32" cy="43" rx="8" ry="7" fill="#7A2E10"/><ellipse cx="32" cy="46" rx="4.5" ry="3" fill="#FF7B7B"/>', extra:'<path d="M26 5 L30 -2 L34 5 M32 4 L40 -1" stroke="#D9731A" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M6 14 l4 3 M58 14 l-4 3" stroke="#FFD54A" stroke-width="3" stroke-linecap="round"/>' },
+  Grateful:    { c:'#FF9EBB', d:'#D96A8E', eyes:'happy',  mouth:'<path d="M26 41 Q32 47 38 41" stroke="#8A2F4D" stroke-width="3" fill="none" stroke-linecap="round"/>', extra:'<path d="M32 58 C24 52 20 48 24 45 C27 43 30 45 32 48 C34 45 37 43 40 45 C44 48 40 52 32 58Z" fill="#FF5F8A" stroke="#C93A66" stroke-width="2"/><circle cx="17" cy="37" r="4.5" fill="#FF6F9A" opacity=".5"/><circle cx="47" cy="37" r="4.5" fill="#FF6F9A" opacity=".5"/>' },
+  Calm:        { c:'#8FD8D0', d:'#4FAFA6', eyes:'closed', mouth:'<path d="M26 41 Q32 46 38 41" stroke="#26665F" stroke-width="3" fill="none" stroke-linecap="round"/>', extra:'<path d="M32 5 C28 -2 36 -4 36 -8" stroke="none"/><path d="M30 6 C24 0 28 -3 34 -1 C36 3 33 6 30 6Z" fill="#6DC48A" stroke="#3E9A60" stroke-width="2"/>' },
+  Confused:    { c:'#C9B2F2', d:'#8E6FD0', eyes:'dots',   mouth:'<path d="M23 43 Q27 38 32 43 T41 43" stroke="#4B2E86" stroke-width="3" fill="none" stroke-linecap="round"/>', extra:'<path d="M37 24 L45 21" stroke="#4B2E86" stroke-width="3" stroke-linecap="round"/><text x="46" y="14" font-size="16" font-weight="700" fill="#8E6FD0">?</text>' },
+  Anxious:     { c:'#BFE08A', d:'#8DB84A', eyes:'wide',   mouth:'<path d="M23 44 Q26 40 29 44 T35 44 T41 44" stroke="#4C6A1A" stroke-width="3" fill="none" stroke-linecap="round"/>', extra:'<path d="M52 18 C55 24 50 26 50 22 C50 20 52 18 52 18Z" fill="#8EDCFF" stroke="#4FA9D6" stroke-width="1.5"/><path d="M14 6 l3 6 M24 3 l1 7 M40 3 l-1 7 M50 8 l-3 6" stroke="#8DB84A" stroke-width="3" stroke-linecap="round"/>' },
+  Angry:       { c:'#FF7A6B', d:'#D3402F', eyes:'dots',   mouth:'<path d="M24 45 Q32 38 40 45" stroke="#6E1A10" stroke-width="3.2" fill="none" stroke-linecap="round"/>', extra:'<path d="M18 24 L29 30 M46 24 L35 30" stroke="#6E1A10" stroke-width="4" stroke-linecap="round"/><path d="M12 8 q-3 -5 1 -8 M52 8 q3 -5 -1 -8" stroke="#D3402F" stroke-width="3" fill="none" stroke-linecap="round"/>' },
+  Sad:         { c:'#8EB6F5', d:'#4F82D6', eyes:'sad',    mouth:'<path d="M25 46 Q32 40 39 46" stroke="#1F3F7A" stroke-width="3" fill="none" stroke-linecap="round"/>', extra:'<path d="M22 36 C25 41 19 43 20 38Z" fill="#CFE6FF" stroke="#4F82D6" stroke-width="1.5"/>' },
+  Disappointed:{ c:'#B7A9C9', d:'#8274A0', eyes:'lid',    mouth:'<path d="M25 45 L39 45" stroke="#42365A" stroke-width="3" stroke-linecap="round"/>', extra:'<path d="M14 54 Q32 62 50 54" stroke="none"/>' },
+  Tired:       { c:'#8D93D9', d:'#5C63B5', eyes:'lid',    mouth:'<ellipse cx="32" cy="45" rx="4" ry="2.6" fill="#2E3270"/>', extra:'<path d="M20 38 q4 3 8 0 M36 38 q4 3 8 0" stroke="#5C63B5" stroke-width="2" fill="none" opacity=".6"/><text x="44" y="14" font-size="13" font-weight="700" fill="#5C63B5">z</text><text x="51" y="6" font-size="9" font-weight="700" fill="#5C63B5">z</text>' }
+};
+function eyes(kind){
+  const e='#2A1F1C';
+  if(kind==='dots')  return `<circle cx="24" cy="30" r="3.6" fill="${e}"/><circle cx="40" cy="30" r="3.6" fill="${e}"/>`;
+  if(kind==='wide')  return `<circle cx="24" cy="29" r="6" fill="#fff" stroke="${e}" stroke-width="2"/><circle cx="40" cy="29" r="6" fill="#fff" stroke="${e}" stroke-width="2"/><circle cx="25" cy="30" r="2.6" fill="${e}"/><circle cx="39" cy="30" r="2.6" fill="${e}"/>`;
+  if(kind==='happy') return `<path d="M19 31 Q24 24 29 31 M35 31 Q40 24 45 31" stroke="${e}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  if(kind==='closed')return `<path d="M19 30 Q24 35 29 30 M35 30 Q40 35 45 30" stroke="${e}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  if(kind==='sad')   return `<circle cx="24" cy="31" r="3.6" fill="${e}"/><circle cx="40" cy="31" r="3.6" fill="${e}"/><path d="M18 24 L29 27 M46 24 L35 27" stroke="${e}" stroke-width="2.6" stroke-linecap="round"/>`;
+  return `<path d="M19 31 H29 M35 31 H45" stroke="${e}" stroke-width="3" stroke-linecap="round"/><path d="M19 31 Q24 25 29 31 M35 31 Q40 25 45 31" fill="${e}" opacity=".18"/>`; // lid
+}
+function mascot(name, cls=''){
+  const m=MASC[name];
+  return `<svg class="masc ${cls}" viewBox="-4 -12 72 78" role="img" aria-label="${name}"><g class="hand"><path d="${BODY}" fill="${m.c}" stroke="${m.d}" stroke-width="3" stroke-linejoin="round"/>${m.extra}${eyes(m.eyes)}${m.mouth}</g></svg>`;
+}
+const SAMPLE=[
+  { when:'9:20 AM', text:'Called mom for her birthday. It was so good to hear her laugh.', feels:['Grateful','Happy'] },
+  { when:'12:30 PM', text:'Long day. Didn’t get to the reading I planned. Tomorrow, then.', feels:['Tired','Disappointed'] }
+];
+const NEW=[
+  { text:'Finally shipped the onboarding flow. Nervous but proud!', feels:['Excited','Anxious'] },
+  { text:'Sat on the balcony and just watched the clouds for a while.', feels:['Calm'] },
+  { text:'Argued about the schedule again. Feeling unheard.', feels:['Angry','Sad'] }
+];
+let newIdx=0;
+function entryHTML(e,pop){ return `<div class="entry"><div>${mascot(e.feels[0], pop?'pop':'')}</div><div><div class="meta">${e.when}</div><div class="txt">${e.text}</div><div class="feels">${e.feels.map(f=>`<span class="pill">${mascot(f)}${f}</span>`).join('')}</div></div></div>`; }
+const entriesEl=document.getElementById('entries');
+function drawEntries(){ entriesEl.innerHTML=`<div class="today" style="margin:6px 0 8px">Today</div><div style="display:flex;flex-direction:column;gap:10px" id="list">${SAMPLE.map(e=>entryHTML(e)).join('')}</div>`; }
+drawEntries();
+document.getElementById('saveBtn').onclick=()=>{
+  const n=NEW[newIdx++%NEW.length]; const now=new Date(); const when=now.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+  SAMPLE.unshift({when, ...n}); drawEntries();
+  const list=document.getElementById('list'); list.firstChild.outerHTML=entryHTML(SAMPLE[0],true);
+  const t=document.getElementById('toast'); t.textContent=`Saved · feeling ${n.feels[0].toLowerCase()}`; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200);
+};
+const gal=document.getElementById('gallery'); Object.keys(MASC).forEach(k=>{ const d=document.createElement('div'); d.innerHTML=mascot(k)+k; gal.appendChild(d); });
+
+function render(replayAnim){
+  const t = current==='auto' ? autoScene() : current, S = SCENES[t];
+  [...controls.querySelectorAll('button')].forEach(b=>b.classList.toggle('on', b.dataset.k===current));
+  phone.dataset.time=t; scene.dataset.time=t;
+  ORDER.forEach(k=>document.getElementById(SKY[k]).setAttribute('opacity', k===t?1:0));
+  const [h2f,h1f,h2s,h1s]=HILL[t]; const h2=document.getElementById('hill2'),h1=document.getElementById('hill1'); h2.setAttribute('fill',h2f);h2.setAttribute('stroke',h2s);h1.setAttribute('fill',h1f);h1.setAttribute('stroke',h1s);
+  document.querySelectorAll('.cl-day').forEach(c=>c.setAttribute('fill', t==='sunset'?'#FFE9DC':'#fff'));
+  document.querySelector('.only-day-clouds').style.opacity = t==='night' ? 0 : t==='sunset' ? .8 : 1;
+  document.getElementById('hello').textContent = `${S.hello}, Richa`;
+  document.getElementById('hello').style.color = t==='night' ? '#F2EEE6' : '';
+  document.getElementById('sub').textContent = S.sub;
+  document.getElementById('sub').style.color = t==='night' ? '#C9C6DE' : '';
+  const q=S.quotes[qi%S.quotes.length]; document.getElementById('qtext').textContent=q[0]; document.getElementById('qby').textContent='— '+q[1]; 
+  if(replayAnim){ const sun=scene.querySelector('.sun'); sun.style.animation='none'; void sun.getBoundingClientRect(); sun.style.animation=''; }
+}
+document.getElementById('quote').onclick=()=>{ qi++; render(false); };
+render(true);
+</script>
+</body>
+</html>
