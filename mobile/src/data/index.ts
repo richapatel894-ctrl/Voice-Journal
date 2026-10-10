@@ -18,5 +18,7 @@ export * from '@/data/processing';
 export * from '@/data/transcription';
 export * from '@/data/tagging';
 export * from '@/data/llm';
+export * from '@/data/welcome';
+export * from '@/data/weather';
 
 export { randomUUID as newId } from 'expo-crypto';
