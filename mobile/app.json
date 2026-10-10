@@ -46,6 +46,12 @@
         {
           "photosPermission": "Voice Journal uses your photos to attach them to journal entries."
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Voice Journal uses your approximate location only to show the weather in your daily welcome."
+        }
       ]
     ],
     "experiments": {
