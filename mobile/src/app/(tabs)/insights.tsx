@@ -35,6 +35,11 @@ import { useTheme } from '@/hooks/use-theme';
 
 type EmotionPoint = { emotion: string; count: number; valence: number; arousal: number };
 
+/** The summary shows this many lines until "See more" is tapped. */
+const SUMMARY_PREVIEW_LINES = 5;
+/** Roughly more than five lines of text at the card's width, so short summaries get no toggle. */
+const SUMMARY_FOLD_CHARS = 200;
+
 const PERIODS: Period[] = ['3M', '6M', '12M', 'YEAR', 'ALL'];
 
 /** One point per day (average valence) labelled "Oct 8", so the chart's x-axis shows dates, not entry indices. */
@@ -69,6 +74,7 @@ export default function InsightsScreen() {
   const [streak, setStreak] = useState({ current: 0, record: 0 });
   const [summary, setSummary] = useState<PeriodSummary | null>(null);
   const [summaryState, setSummaryState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
 
   const sinceDay = useMemo(() => periodStartDay(period), [period]);
 
@@ -143,11 +149,38 @@ export default function InsightsScreen() {
 
           <View style={styles.section}>
             <ThemedText type="label" themeColor="textSecondary">
+              Emotional map
+            </ThemedText>
+            {emotionPoints.length === 0 ? (
+              <ThemedText themeColor="textSecondary">No tagged entries in this period yet.</ThemedText>
+            ) : (
+              <EmotionMap
+                points={emotionPoints}
+                selected={selectedEmotion}
+                onSelect={(emotion) => {
+                  setSelectedEmotion(emotion);
+                  router.push({ pathname: '/entries', params: { emotion } });
+                }}
+              />
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <ThemedText type="label" themeColor="textSecondary">
               Summary
             </ThemedText>
             <ThemedView type="backgroundElement" style={styles.card}>
               {summary ? (
-                <ThemedText>{summary.text}</ThemedText>
+                <View style={styles.summaryText}>
+                  <ThemedText numberOfLines={summaryExpanded ? undefined : SUMMARY_PREVIEW_LINES}>{summary.text}</ThemedText>
+                  {summary.text.length > SUMMARY_FOLD_CHARS && (
+                    <Pressable onPress={() => setSummaryExpanded((v) => !v)} hitSlop={12}>
+                      <ThemedText type="smallBold" themeColor="accent">
+                        {summaryExpanded ? 'See less' : 'See more'}
+                      </ThemedText>
+                    </Pressable>
+                  )}
+                </View>
               ) : (
                 <ThemedText themeColor="textSecondary">
                   {summaryState === 'loading'
@@ -178,24 +211,6 @@ export default function InsightsScreen() {
                 </View>
               )}
             </ThemedView>
-          </View>
-
-          <View style={styles.section}>
-            <ThemedText type="label" themeColor="textSecondary">
-              Emotional map
-            </ThemedText>
-            {emotionPoints.length === 0 ? (
-              <ThemedText themeColor="textSecondary">No tagged entries in this period yet.</ThemedText>
-            ) : (
-              <EmotionMap
-                points={emotionPoints}
-                selected={selectedEmotion}
-                onSelect={(emotion) => {
-                  setSelectedEmotion(emotion);
-                  router.push({ pathname: '/entries', params: { emotion } });
-                }}
-              />
-            )}
           </View>
 
           <View style={styles.section}>
@@ -273,6 +288,7 @@ const styles = StyleSheet.create({
   section: { gap: Spacing.two },
   card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
   guidance: { gap: Spacing.one, marginTop: Spacing.one },
+  summaryText: { gap: Spacing.two },
   summaryFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.one },
   chartHost: { height: 160 },
 });
