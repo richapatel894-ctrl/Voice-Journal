@@ -99,7 +99,7 @@ export default function EntryDetailScreen() {
           <ThemedText>
             {entry.kind === 'voice' && entry.transcriptionStatus === 'pending'
               ? 'Transcribing…'
-              : entry.text || '(empty entry)'}
+              : entry.text || (entry.kind === 'voice' ? 'No speech detected' : '(empty entry)')}
           </ThemedText>
         )}
 

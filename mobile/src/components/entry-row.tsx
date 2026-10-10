@@ -22,7 +22,7 @@ export function EntryRow({ entry, onPress, onEdit, onDelete, onRetry }: EntryRow
     ? 'Transcribing…'
     : isFailed
       ? 'Couldn’t transcribe — see ⋯ to retry'
-      : entry.text || '(empty entry)';
+      : entry.text || (entry.kind === 'voice' ? 'No speech detected' : '(empty entry)');
 
   const openMenu = () => {
     Alert.alert(entry.kind === 'voice' ? 'Voice entry' : 'Text entry', undefined, [
