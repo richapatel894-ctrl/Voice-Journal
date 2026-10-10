@@ -273,7 +273,7 @@ function DayClouds({ time }: { time: TimeOfDay }) {
 
 const hover = (delay = 0): Loop => ({ from: -14, to: 14, duration: 10000, delay, yoyo: true, ease: 'inOut' });
 
-function WeatherLayers({ weather }: { weather: WeatherKind }) {
+function WeatherLayers({ weather, night }: { weather: WeatherKind; night: boolean }) {
   if (weather === 'clear') return null;
   const tones: Partial<Record<WeatherKind, string>> = {
     cloudy: 'rgba(120,130,145,0.18)',
@@ -298,7 +298,10 @@ function WeatherLayers({ weather }: { weather: WeatherKind }) {
           <Tone color={tone} />
         </SvgLayer>
       )}
-      {weather === 'partly' && [cloud(196, 92, 150, '#FFFFFF', '#C9D8E4', 0), cloud(268, 150, 96, '#FFFFFF', '#C9D8E4', 1)]}
+      {weather === 'partly' &&
+        (night
+          ? [cloud(196, 92, 150, '#7C86B0', '#5F6A96', 0), cloud(268, 150, 96, '#7C86B0', '#5F6A96', 1)]
+          : [cloud(196, 92, 150, '#FFFFFF', '#C9D8E4', 0), cloud(268, 150, 96, '#FFFFFF', '#C9D8E4', 1)])}
       {weather === 'cloudy' &&
         [cloud(-8, 20, 130, '#D3DAE3', '#AEB9C7', 0), cloud(80, 52, 150, '#E1E6ED', '#B9C3D0', 1), cloud(190, 14, 150, '#D3DAE3', '#AEB9C7', 2), cloud(250, 70, 120, '#E1E6ED', '#B9C3D0', 3)]}
       {(weather === 'rain' || weather === 'storm') && (
@@ -387,12 +390,14 @@ export function Scene({ time, lookIndex, weather, width, height }: SceneProps) {
             <DayClouds time={time} />
           </>
         )}
-        {look.extras.map((kind) => (
+        {look.extras.filter((kind) => kind !== 'sailboat').map((kind) => (
           <Extra key={kind} kind={kind} time={time} />
         ))}
         <SvgLayer>
           <Ground kind={look.ground} time={time} pal={look.pal} />
         </SvgLayer>
+        {/* the boat floats on the sea, so it is drawn after the ground */}
+        {look.extras.includes('sailboat') && <Extra kind="sailboat" time={time} />}
         {look.ground === 'sea' && (
           <Motion opacity={{ from: 0.25, to: 0.85, duration: 1300, yoyo: true, ease: 'inOut' }}>
             <SvgLayer>
@@ -400,7 +405,7 @@ export function Scene({ time, lookIndex, weather, width, height }: SceneProps) {
             </SvgLayer>
           </Motion>
         )}
-        <WeatherLayers weather={w} />
+        <WeatherLayers weather={w} night={night} />
       </SceneMetricsContext.Provider>
     </View>
   );

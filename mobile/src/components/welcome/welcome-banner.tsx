@@ -16,13 +16,16 @@ type WelcomeBannerProps = {
   choice: WelcomeChoice;
   weather: Weather | null;
   onNextQuote: () => void;
+  /** Development only: long-press the banner to step through every look, tap the chip to cycle weather. */
+  onDevPreview?: () => void;
+  onDevWeather?: () => void;
 };
 
 /**
  * The Home welcome banner (PRD §8.1): greeting, animated time-of-day scene, a quote on a translucent
  * plate, and a weather chip. The ground in the scene rises above the quote so scenery stays visible.
  */
-export function WelcomeBanner({ name, choice, weather, onNextQuote }: WelcomeBannerProps) {
+export function WelcomeBanner({ name, choice, weather, onNextQuote, onDevPreview, onDevWeather }: WelcomeBannerProps) {
   const [width, setWidth] = useState(0);
   const night = choice.timeOfDay === 'night';
   const quote = findQuote(choice.timeOfDay, choice.quoteId);
@@ -32,7 +35,7 @@ export function WelcomeBanner({ name, choice, weather, onNextQuote }: WelcomeBan
   const icon = night && (!weather || weather.kind === 'clear') ? '🌙' : WEATHER_ICON[weather?.kind ?? 'clear'];
 
   return (
-    <View style={styles.card} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+    <Pressable style={styles.card} onLongPress={onDevPreview} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       {width > 0 && (
         <Scene
           key={`${choice.timeOfDay}-${choice.look}`}
@@ -50,11 +53,11 @@ export function WelcomeBanner({ name, choice, weather, onNextQuote }: WelcomeBan
       </View>
 
       {weather && (
-        <View style={[styles.chip, night ? styles.chipNight : styles.chipDay]} pointerEvents="none">
+        <Pressable onPress={onDevWeather} style={[styles.chip, night ? styles.chipNight : styles.chipDay]}>
           <Text style={[styles.chipText, { color: ink }]}>
             {icon} {weather.temperatureC}°C
           </Text>
-        </View>
+        </Pressable>
       )}
 
       {quote && (
@@ -66,7 +69,7 @@ export function WelcomeBanner({ name, choice, weather, onNextQuote }: WelcomeBan
           <Text style={[styles.quoteBy, { color: ink }]}>— {quote.author}</Text>
         </Pressable>
       )}
-    </View>
+    </Pressable>
   );
 }
 

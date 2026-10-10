@@ -11,6 +11,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Toast } from '@/components/toast';
 import { WELCOME_PALETTE } from '@/components/welcome/scene-data';
+import { QUOTES } from '@/content/quotes';
 import { WelcomeBanner } from '@/components/welcome/welcome-banner';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import {
@@ -35,9 +36,15 @@ import { ThemeOverrideContext } from '@/hooks/theme-override';
 import { useTheme } from '@/hooks/use-theme';
 import { localDayString } from '@/lib/date';
 
-type HomeContentProps = { choice: WelcomeChoice | null; weather: Weather | null; onNextQuote: () => void };
+type HomeContentProps = {
+  choice: WelcomeChoice | null;
+  weather: Weather | null;
+  onNextQuote: () => void;
+  onDevPreview?: () => void;
+  onDevWeather?: () => void;
+};
 
-function HomeContent({ choice, weather, onNextQuote }: HomeContentProps) {
+function HomeContent({ choice, weather, onNextQuote, onDevPreview, onDevWeather }: HomeContentProps) {
   const db = useSQLiteContext();
   const theme = useTheme();
   const [name, setName] = useState<string | null>(null);
@@ -89,7 +96,7 @@ function HomeContent({ choice, weather, onNextQuote }: HomeContentProps) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}>
           <StreakRow current={streak.current} daysWithEntries={streak.daysWithEntries} />
 
-          {choice && <WelcomeBanner name={name} choice={choice} weather={weather} onNextQuote={onNextQuote} />}
+          {choice && <WelcomeBanner name={name} choice={choice} weather={weather} onNextQuote={onNextQuote} onDevPreview={onDevPreview} onDevWeather={onDevWeather} />}
 
           <View style={styles.actions}>
             <Pressable
@@ -171,6 +178,9 @@ export default function HomeScreen() {
   const db = useSQLiteContext();
   const [choice, setChoice] = useState<WelcomeChoice | null>(null);
   const [weather, setWeather] = useState<Weather | null>(null);
+  // Development only: step through all 40 looks and each weather to check them on the device.
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [previewWeather, setPreviewWeather] = useState<number | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -179,7 +189,16 @@ export default function HomeScreen() {
     }, [db])
   );
 
-  const palette = WELCOME_PALETTE[choice?.timeOfDay ?? timeOfDayFor()];
+  const TIMES = ['morning', 'afternoon', 'sunset', 'night'] as const;
+  const KINDS = ['clear', 'partly', 'cloudy', 'rain', 'storm', 'snow', 'fog'] as const;
+  const shownChoice: WelcomeChoice | null =
+    __DEV__ && previewIndex !== null
+      ? { window: 'preview', timeOfDay: TIMES[previewIndex % 4], look: Math.floor(previewIndex / 4) % 10, quoteId: QUOTES[TIMES[previewIndex % 4]][0].id }
+      : choice;
+  const shownWeather: Weather | null =
+    __DEV__ && previewWeather !== null ? { kind: KINDS[previewWeather % KINDS.length], temperatureC: 14 } : weather;
+
+  const palette = WELCOME_PALETTE[shownChoice?.timeOfDay ?? timeOfDayFor()];
   const override = {
     background: palette.background,
     backgroundElement: palette.backgroundElement,
@@ -193,8 +212,10 @@ export default function HomeScreen() {
     <ThemeOverrideContext.Provider value={override}>
       <StatusBar style={palette.dark ? 'light' : 'dark'} />
       <HomeContent
-        choice={choice}
-        weather={weather}
+        choice={shownChoice}
+        weather={shownWeather}
+        onDevPreview={__DEV__ ? () => setPreviewIndex((i) => ((i ?? -1) + 1) % 40) : undefined}
+        onDevWeather={__DEV__ ? () => setPreviewWeather((i) => ((i ?? -1) + 1) % 7) : undefined}
         onNextQuote={() => choice && void nextWelcomeQuote(db, choice).then(setChoice)}
       />
     </ThemeOverrideContext.Provider>
