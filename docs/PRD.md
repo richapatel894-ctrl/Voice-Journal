@@ -43,6 +43,8 @@ Just me: a single-user personal tool. No accounts, no sharing, no multi-tenant c
 - **Direction:** warm cream background, serif large titles (system serif), small-caps tracked labels, soft rounded cards with no heavy shadows, system sans for body text.
 - **Accent:** the existing brand pink (`#D9557A` dark, `#FFC9DA` light), replacing the amber of the reference apps.
 - **Emotion colors:** the existing per-emotion pastel palette.
+- **Emotion mascots (proposed, 2026-10-10):** each of the 10 emotions has a small hand-drawn character instead of an emoji, shown on entry rows, tag pills and the save moment. They are original designs, inspired by the idea of Inside Out's feelings but not copies of those Disney/Pixar characters. Mascots are the one fixed element of the welcome experience, because each is tied to an emotion. First-draft art lives in `docs/prototypes/home-welcome.html`.
+- **Streak hearts (decided 2026-10-10):** the weekday streak uses hearts instead of circles; today's heart beats gently.
 - **Dark mode:** deprioritized for now (2026-09-27) — v1 targets light mode only. The color values and the Appearance override mechanism exist (deep plum background instead of pure black), but the Settings Appearance choice is limited to System/Light while a dark-mode bug in the native tab bar is open (see the app's own decision log / memory, not duplicated here). Revisit once that's resolved.
 - **References** (in `App UX inspirations/`): 5 Minute Journal for the cream and serif look, the feed grouping and the stat tiles; Apple Journal for the audio playback card; the dark color-block app for the streak row; pillowtalk for restraint.
 
@@ -53,16 +55,23 @@ Four native tabs: **Home**, **Entries**, **Insights**, **Settings**. Media (atta
 ## 8. Screen requirements
 
 ### 8.1 Home
-- Top to bottom: a streak row, a warm time-of-day greeting that uses your name from Profile (for example "Good morning, Richa") with "How are you feeling today?" (copy only, no mood picker; emotion is auto-detected), the **big Record button** (the hero), a smaller **Write** button, and a "Today" section.
-- **Streak row:** seven weekday dots for the current week with today ringed, the current streak count, and the record streak. On the first save of the day: a haptic and a checkmark animation inside the save toast. There is no full-screen celebration.
-- **Today section** shows only today's entries, deliberately avoiding an infinite feed. Empty state: "Nothing yet today. Speak or write your first thought." Past days are reached through Entries.
-- Entry cards on Home have a "..." menu for edit and delete.
+- Top to bottom: a streak row, the **welcome banner** (below), the **big Record button** (the hero), a smaller **Write** button, and a "Today" section.
+- **Streak row:** seven weekday hearts for the current week with today's heart beating gently, the current streak count, and the record streak. On the first save of the day: a haptic and a checkmark animation inside the save toast. There is no full-screen celebration.
+- **Welcome banner (proposed, pending prototype approval; prototype in `docs/prototypes/home-welcome.html`):** one compact illustrated card that replaces the plain greeting and holds, together: the time-of-day greeting with the name from Profile ("Good morning, Richa"), a hand-drawn animated scene, a short quote on a translucent plate at the bottom (no prompt or question line), and a small weather chip with the temperature in °C. The ground in the scene rises above the quote plate so some scenery stays visible. The banner must stay compact so Record and Today remain visible without scrolling.
+  - **Time of day:** morning (about 5-11), afternoon (11-16), sunset (16-19), night (otherwise). Morning: a cute hand-drawn sun rises behind the hills (twice, then rests). Afternoon: the sun sits high and glows. Sunset: the sun sinks. Night: moon, clouds, twinkling stars. The page background shifts subtly with the time of day. The exact hours are an open question.
+  - **Variety:** 10 different looks per time of day (40 to start), each a combination of sky colors, sun face and ray style, ground (hills, mountains, sea, dunes, city) and small extras (birds, balloon, kite, butterflies, windmill, house, owl, fireflies, shooting star and others), picked at random so the screen never feels repetitive. More looks can be added later without changing code structure.
+  - **Weather:** the scene reflects the current weather (clear, partly cloudy, cloudy, rain, thunderstorm, snow, fog) with matching effects and the temperature in °C. Weather needs coarse location ("when in use", rounded to about 1 km) and is fetched from the free Open-Meteo service. If location is denied or the phone is offline, the banner simply shows the normal scene without weather.
+  - **Quotes:** a library of 1,000 to 2,000 quotes stored in the repo, each tagged with who said it and a time-of-day mood (morning, afternoon, sunset, night). Every quote's attribution must be checked, and doubtful ones marked "attributed" or "Anonymous". Tapping the quote shows another one.
+  - **Motion:** respects the iPhone's Reduce Motion setting.
+- **Today section** shows only today's entries, deliberately avoiding an infinite feed. Empty state: "Nothing yet today. Your first entry will show up here." Past days are reached through Entries.
+- Entry cards on Home have a "..." menu for edit and delete. Each card shows the mascot of its main emotion, and its other emotions as small mascot pills. When an entry is saved and tagged, its mascot pops in.
 - Pull to refresh. A lightweight toast confirms saves (not a modal).
 - Home is never gated on a server or network connection.
 
 ### 8.2 Recorder
 - Tapping Record opens a full-screen sheet and **starts recording immediately** (one tap to record; the microphone permission prompt appears on the very first tap, with a one-line explanation).
 - Shows a live waveform and timer, with pause and discard controls.
+- **Silence is not transcribed.** Whisper invents text from silence or noise, so phrases it marks as probably-not-speech or very low confidence are dropped; an entry with no speech reads "No speech detected" and keeps its audio.
 - **Stop saves the entry immediately.** There is no review step. The entry appears with a "Transcribing..." state until the transcript is ready. Transcription failure keeps the audio and offers a retry.
 - After save: the silent auto-tag runs (section 9) and the toast shows.
 
@@ -86,13 +95,13 @@ Four native tabs: **Home**, **Entries**, **Insights**, **Settings**. Media (atta
 
 ### 8.6 Insights
 One scrollable page. Sections, top to bottom:
-1. **Period picker:** 3M / 6M / 12M / Year / All. It drives the written summary, emotion map, snapshot, stat tiles, mood-over-time and heatmap.
-2. **Written summary:** an LLM-written summary of the selected period: what you've been feeling, what you've been writing about, and what has been top of mind. It is generated from the entries, cached on the phone, and regenerated on request or when new entries arrive. Offline, the last summary is shown with its date.
-3. **Emotion map:** valence and arousal bubbles, sized by count. Tapping a bubble opens Entries filtered to that emotion.
+1. **Period picker:** 3M / 6M / 12M / Year / All. It drives the emotion map, written summary, snapshot, stat tiles, mood-over-time and heatmap.
+2. **Emotion map:** valence and arousal bubbles, sized by count. It comes first, right under the period picker. Tapping a bubble opens Entries filtered to that emotion.
+3. **Written summary:** an LLM-written summary of the selected period: what you've been feeling, what you've been writing about, and what has been top of mind. It sits below the emotion map and is folded to about five lines with a "See more" link that expands it. It is generated from the entries, cached on the phone with its date, regenerated on request or when newer entries exist, and the last summary stays visible offline.
 4. **Snapshot:** entry count, most-written theme, most-felt emotion, plus an actionable card (what, why, how) for the selected emotion.
 5. **Stat tiles:** current streak, record streak, total entries, days journaling.
-6. **Mood over time:** an area chart of valence per entry over the selected period.
-7. **Journaling heatmap:** frequency by day over the selected period (the SwiftUI heatmap ignored the period picker, which is fixed here). Tapping a day opens Entries for that day.
+6. **Mood over time:** an area chart of average valence per day over the selected period, with dates on the x-axis.
+7. **Journaling heatmap:** frequency by day over the selected period (the SwiftUI heatmap ignored the period picker, which is fixed here). It opens scrolled to the most recent days. Tapping a day opens Entries for that day.
 
 - **Later (not v1):** a frequent-words view and a weekly mood view.
 - Filters from the Entries chip strip do not carry over to Insights in v1. The strip's filter state should be one shared value so Insights can reuse it later.
@@ -164,6 +173,10 @@ The UX decisions above fixed the *requirements* on data (section 10). This secti
 | **Where entries live** | **Decided: on-device SQLite (`expo-sqlite`).** Audio and photos are files in the app's storage; the database holds only their paths | The phone works alone (section 5, principle 3). SQLite serves the tag, emotion, day, period and text-search queries. |
 | **Transcription** | **Decided (2026-10-08): Whisper (`openai/whisper-1`) through OpenRouter's `/audio/transcriptions` endpoint, using the same OpenRouter key as tagging and summaries.** Replaces the parked options (a separate OpenAI key, on-device whisper.cpp, or a Gemini audio model via chat) | One key for everything. The phone sends the saved m4a as base64; OpenRouter bills per audio second with no markup. Upstream limit is about 60s of processing, which is ample for journal entries. Failure marks the entry `failed` and keeps the audio, with a retry. |
 | **LLM tagging, emotions and summary** | **Decided: LLM-derived, no rule-based tagging. The phone calls OpenRouter directly (no Mac server, no proxy).** The starting model is `openai/gpt-5.6-luna`, as in the current backend; prompt design and result validation are left to implementation | Works on any network. Saving is instant and tagging happens in the background, retried when offline. The emotion map and heatmap are computed on the phone from the stored tags; only tagging and the written summary call the LLM. |
+| **Tagging quality (built 2026-10-10)** | After the text exists, the model returns up to 3 themes (seeded from the theme catalog plus themes already in use) and up to 3 emotions from the catalog as JSON; output is validated (unknown emotions dropped, counts capped, theme names normalized). Tags the user set are never overwritten; failures are retried at app start. | Matches principles 3 and 4. |
+| **Weather and location** | **Proposed:** coarse location (when in use) plus Open-Meteo (free, no key) for temperature and conditions. WeatherKit is the alternative but needs signed requests from a server. | Only weather lookups leave the phone for this feature; coordinates are rounded. Denied or offline falls back to the plain scene. |
+| **Welcome scenes and quotes** | **Proposed:** both ship inside the app (scene definitions in code, quotes as a JSON file in the repo). The phone picks a quote and a look on its own, seeded by date and time of day so it stays steady within a time-of-day window and changes between windows and days, and avoids repeating recent ones (the recent list is the only thing stored in the database). Library updates ship with app updates; a remote file with a bundled fallback can come later. | No network needed, works offline, no server to run. |
+| **Media file paths (built 2026-10-10)** | Stored relative to the app's Documents folder, converted at the data-layer boundary; migration v2 rewrote existing rows. | The container path changes on reinstall, which broke absolute paths. |
 | **API keys** | **Decided for OpenRouter (tagging, emotions, written summary): read at build time from a git-ignored `mobile/.env.local` (`EXPO_PUBLIC_OPENROUTER_API_KEY`), no in-app screen.** The same key covers transcription (Whisper via OpenRouter), so no second key is needed | Same file, one line per key, both read the same way. |
 | **Backup or sync** | **Decided: the automatic iPhone backup only. No export in v1 (moved to v2) and no sync between devices.** To verify while building: that the app's database, audio and media files are included in device backups | Trade-off: a lost phone without a backup means a lost journal. |
 | **When iOS suspends the app** | **Decided: after a save, request a short extra background window. Any unfinished transcription or tagging resumes the next time the app opens.** Entries keep their pending state until then | No background-upload system in v1. |
@@ -260,8 +273,15 @@ The app is "done" for v1 when, on my iPhone, I can:
 | 2026-09-20 | No separate month calendar: the Insights heatmap is the view of which days have entries, and it now respects the period picker. |
 | superseded | The old "PWA vs backend vs Capacitor" question is resolved: a native Expo app. The "backend appetite" question is now the section 11 architecture pass. |
 | 2026-09-27 | Dark mode deprioritized for v1: light mode only, because of an open bug where the native tab bar corrupts label text in dark mode. Moved to the v2 roadmap. |
+| 2026-10-08 | Kept the original pink/plum look; an amber 5 Minute Journal-style restyle was tried and rejected (kept on branch `experiment/five-minute-restyle`). |
+| 2026-10-10 | Auto-tagging and the written period summary are built (OpenRouter, `openai/gpt-5.6-luna`). Transcription drops text Whisper invents from silence. |
+| 2026-10-10 | Insights order: emotion map first, then the written summary, folded to about five lines with "See more". |
+| 2026-10-10 | Streak uses hearts instead of circles. Emotions get original hand-drawn mascots instead of emoji (inspired by Inside Out, not copied). |
+| 2026-10-10 | Home welcome banner proposed: time-of-day animated scene with the quote inside the card, weather and °C, 10 random looks per time of day, thousands of quotes in the repo. Prototype first; build after approval. |
 
 ## 17. Open questions
+
+- **Welcome banner:** the time-of-day hour boundaries, whether a quote stays fixed within a time-of-day window, an animation off switch, who vets and tags the 1,000-2,000 quotes (attribution and time-of-day mood), and final mascot art.
 
 - **Transcription provider:** decided 2026-10-08, Whisper via OpenRouter (see the architecture table). Needs `EXPO_PUBLIC_OPENROUTER_API_KEY` in `mobile/.env.local` to actually run.
 - The exact limit on theme tags per entry (currently "about 3") and normalization rules (for example merging near-duplicate tags).
