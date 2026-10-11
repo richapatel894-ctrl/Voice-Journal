@@ -5,7 +5,7 @@ import { Suspense, useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import { DATABASE_NAME, ensureDataDirectories, migrateDbIfNeeded, resumePendingTranscriptions } from '@/data';
+import { DATABASE_NAME, ensureDataDirectories, migrateDbIfNeeded, resumePendingProcessing } from '@/data';
 import { AppearanceProvider, useAppearance } from '@/hooks/use-appearance';
 
 SplashScreen.preventAutoHideAsync();
@@ -18,7 +18,7 @@ function AppContent() {
 
   // Finish any voice entries left pending (e.g. iOS suspended the app mid-upload).
   useEffect(() => {
-    void resumePendingTranscriptions(db);
+    void resumePendingProcessing(db);
   }, [db]);
 
   return (

@@ -3,7 +3,7 @@ import { pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EmotionMap } from '@/components/emotion-map';
@@ -11,24 +11,34 @@ import { HeatmapSummary, JournalingHeatmap } from '@/components/journaling-heatm
 import { StatTiles } from '@/components/stat-tiles';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { BottomTabInset, Spacing } from '@/constants/theme';
 import {
   EMOTION_GUIDANCE,
   PERIOD_LABELS,
   computeStreak,
   emotionMapStats,
+  generatePeriodSummary,
+  getPeriodSummary,
+  hasLlmKey,
   heatmapData,
   insightsSnapshot,
+  isSummaryStale,
   moodOverTime,
   periodStartDay,
   type HeatmapDay,
   type InsightsSnapshot,
   type MoodPoint,
   type Period,
+  type PeriodSummary,
 } from '@/data';
 import { useTheme } from '@/hooks/use-theme';
 
 type EmotionPoint = { emotion: string; count: number; valence: number; arousal: number };
+
+/** The summary shows this many lines until "See more" is tapped. */
+const SUMMARY_PREVIEW_LINES = 5;
+/** Roughly more than five lines of text at the card's width, so short summaries get no toggle. */
+const SUMMARY_FOLD_CHARS = 200;
 
 const PERIODS: Period[] = ['3M', '6M', '12M', 'YEAR', 'ALL'];
 
@@ -62,11 +72,34 @@ export default function InsightsScreen() {
   const [heatmap, setHeatmap] = useState<HeatmapDay[]>([]);
   const heatmapScroll = useRef<ScrollView>(null);
   const [streak, setStreak] = useState({ current: 0, record: 0 });
+  const [summary, setSummary] = useState<PeriodSummary | null>(null);
+  const [summaryState, setSummaryState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
 
   const sinceDay = useMemo(() => periodStartDay(period), [period]);
 
+  const refreshSummary = useCallback(async () => {
+    setSummaryState('loading');
+    try {
+      const fresh = await generatePeriodSummary(db, period, sinceDay);
+      setSummary(fresh);
+      setSummaryState('idle');
+    } catch {
+      setSummaryState('error'); // the last cached summary, if any, stays on screen
+    }
+  }, [db, period, sinceDay]);
+
   useFocusEffect(
     useCallback(() => {
+      // Show the cached summary straight away; write a new one only if entries changed since.
+      getPeriodSummary(db, period)
+        .then((cached) => {
+          setSummary(cached);
+          return isSummaryStale(db, period, sinceDay);
+        })
+        .then((stale) => {
+          if (stale && hasLlmKey()) void refreshSummary();
+        });
       Promise.all([
         emotionMapStats(db, sinceDay),
         insightsSnapshot(db, sinceDay),
@@ -84,7 +117,7 @@ export default function InsightsScreen() {
         }
       });
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [db, sinceDay])
+    }, [db, period, sinceDay, refreshSummary])
   );
 
   const guidanceEmotion = selectedEmotion ?? snapshot.topEmotion;
@@ -116,17 +149,6 @@ export default function InsightsScreen() {
 
           <View style={styles.section}>
             <ThemedText type="label" themeColor="textSecondary">
-              Summary
-            </ThemedText>
-            <ThemedView type="backgroundElement" style={styles.card}>
-              <ThemedText themeColor="textSecondary">
-                A written summary needs the AI connection, which is not set up yet.
-              </ThemedText>
-            </ThemedView>
-          </View>
-
-          <View style={styles.section}>
-            <ThemedText type="label" themeColor="textSecondary">
               Emotional map
             </ThemedText>
             {emotionPoints.length === 0 ? (
@@ -141,6 +163,54 @@ export default function InsightsScreen() {
                 }}
               />
             )}
+          </View>
+
+          <View style={styles.section}>
+            <ThemedText type="label" themeColor="textSecondary">
+              Summary
+            </ThemedText>
+            <ThemedView type="backgroundElement" style={styles.card}>
+              {summary ? (
+                <View style={styles.summaryText}>
+                  <ThemedText numberOfLines={summaryExpanded ? undefined : SUMMARY_PREVIEW_LINES}>{summary.text}</ThemedText>
+                  {summary.text.length > SUMMARY_FOLD_CHARS && (
+                    <Pressable onPress={() => setSummaryExpanded((v) => !v)} hitSlop={12}>
+                      <ThemedText type="smallBold" themeColor="accent">
+                        {summaryExpanded ? 'See less' : 'See more'}
+                      </ThemedText>
+                    </Pressable>
+                  )}
+                </View>
+              ) : (
+                <ThemedText themeColor="textSecondary">
+                  {summaryState === 'loading'
+                    ? 'Writing your summary…'
+                    : summaryState === 'error'
+                      ? 'Couldn’t write the summary. Check your connection and try again.'
+                      : snapshot.entryCount === 0
+                        ? 'Write or record a few entries and your summary will appear here.'
+                        : 'No summary yet.'}
+                </ThemedText>
+              )}
+              {(summary || summaryState === 'error' || snapshot.entryCount > 0) && (
+                <View style={styles.summaryFooter}>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {summary && summaryState === 'loading'
+                      ? 'Refreshing…'
+                      : summary && summaryState === 'error'
+                        ? 'Couldn’t refresh — showing the last summary'
+                        : summary
+                          ? `Updated ${new Date(summary.generatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+                          : ''}
+                  </ThemedText>
+                  <Pressable onPress={refreshSummary} disabled={summaryState === 'loading'} hitSlop={12}>
+                    <ThemedText type="smallBold" themeColor="accent">
+                      {summary ? 'Refresh' : 'Write summary'}
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              )}
+            </ThemedView>
           </View>
 
           <View style={styles.section}>
@@ -214,9 +284,12 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
   title: { fontSize: 32, lineHeight: 40, paddingHorizontal: Spacing.four },
-  content: { padding: Spacing.four, gap: Spacing.five },
+  // Extra room at the bottom so the last section can scroll clear of the floating tab bar.
+  content: { padding: Spacing.four, paddingBottom: BottomTabInset + Spacing.six, gap: Spacing.five },
   section: { gap: Spacing.two },
   card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.two },
   guidance: { gap: Spacing.one, marginTop: Spacing.one },
+  summaryText: { gap: Spacing.two },
+  summaryFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.one },
   chartHost: { height: 160 },
 });
