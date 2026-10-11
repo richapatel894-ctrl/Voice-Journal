@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { QUOTES, type TimeOfDay } from '@/content/quotes';
+import { QUOTES, type Quote, type QuoteTheme, type TimeOfDay } from '@/content/quotes';
 import { getSetting, setSetting } from '@/data/settings';
 import { localDayString } from '@/lib/date';
 
@@ -24,12 +24,13 @@ export type WelcomeChoice = {
   quoteId: string;
 };
 
-type Recent = { looks: Record<TimeOfDay, number[]>; quotes: string[] };
+type Recent = { looks: Record<TimeOfDay, number[]>; quotes: string[]; themes?: QuoteTheme[] };
 
 const KEY_CURRENT = 'welcome_current';
 const KEY_RECENT = 'welcome_recent';
 const RECENT_LOOKS = 4; // of 10 looks, never repeat the last 4 shown for a time of day
 const RECENT_QUOTES = 60;
+const RECENT_THEMES = 2; // the next quote is about something different from the last two
 
 /** The night window runs past midnight, so after midnight it still belongs to the evening it began. */
 function windowFor(now: Date, timeOfDay: TimeOfDay): string {
@@ -54,7 +55,22 @@ async function readJson<T>(db: SQLiteDatabase, key: string): Promise<T | null> {
   }
 }
 
-const emptyRecent = (): Recent => ({ looks: { morning: [], afternoon: [], sunset: [], night: [] }, quotes: [] });
+const emptyRecent = (): Recent => ({ looks: { morning: [], afternoon: [], sunset: [], night: [] }, quotes: [], themes: [] });
+
+/** A quote not shown recently, preferring a theme that differs from the last couple shown. */
+function pickQuote(timeOfDay: TimeOfDay, recent: Recent): Quote {
+  const unseen = QUOTES[timeOfDay].filter((q) => !recent.quotes.includes(q.id));
+  const pool = unseen.length > 0 ? unseen : QUOTES[timeOfDay];
+  const lastThemes = (recent.themes ?? []).slice(-RECENT_THEMES);
+  const freshTheme = pool.filter((q) => !lastThemes.includes(q.theme));
+  const choices = freshTheme.length > 0 ? freshTheme : pool;
+  return choices[Math.floor(Math.random() * choices.length)];
+}
+
+function remember(recent: Recent, quote: Quote): void {
+  recent.quotes = [...recent.quotes, quote.id].slice(-RECENT_QUOTES);
+  recent.themes = [...(recent.themes ?? []), quote.theme].slice(-RECENT_THEMES);
+}
 
 /**
  * The scene look and quote for right now. Chosen at random the first time a time-of-day window is
@@ -73,10 +89,10 @@ export async function getWelcomeChoice(db: SQLiteDatabase, now: Date = new Date(
     Array.from({ length: LOOK_COUNT }, (_, i) => i),
     recent.looks[timeOfDay] ?? []
   );
-  const quote = pickAvoiding(QUOTES[timeOfDay], QUOTES[timeOfDay].filter((q) => recent.quotes.includes(q.id)));
+  const quote = pickQuote(timeOfDay, recent);
 
   recent.looks[timeOfDay] = [...(recent.looks[timeOfDay] ?? []), look].slice(-RECENT_LOOKS);
-  recent.quotes = [...recent.quotes, quote.id].slice(-RECENT_QUOTES);
+  remember(recent, quote);
   const choice: WelcomeChoice = { window, timeOfDay, look, quoteId: quote.id };
   await Promise.all([setSetting(db, KEY_CURRENT, JSON.stringify(choice)), setSetting(db, KEY_RECENT, JSON.stringify(recent))]);
   return choice;
@@ -85,8 +101,8 @@ export async function getWelcomeChoice(db: SQLiteDatabase, now: Date = new Date(
 /** Tapping the quote: another quote for the same time of day (the look stays). */
 export async function nextWelcomeQuote(db: SQLiteDatabase, choice: WelcomeChoice): Promise<WelcomeChoice> {
   const recent = (await readJson<Recent>(db, KEY_RECENT)) ?? emptyRecent();
-  const quote = pickAvoiding(QUOTES[choice.timeOfDay], QUOTES[choice.timeOfDay].filter((q) => recent.quotes.includes(q.id)));
-  recent.quotes = [...recent.quotes, quote.id].slice(-RECENT_QUOTES);
+  const quote = pickQuote(choice.timeOfDay, recent);
+  remember(recent, quote);
   const next = { ...choice, quoteId: quote.id };
   await Promise.all([setSetting(db, KEY_CURRENT, JSON.stringify(next)), setSetting(db, KEY_RECENT, JSON.stringify(recent))]);
   return next;
