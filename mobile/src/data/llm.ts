@@ -1,23 +1,25 @@
-const CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
+import { aiEndpoint, hasAiBackend } from '@/data/backend';
+
 /** One model for tagging and summaries (PRD §11). */
 export const LLM_MODEL = 'openai/gpt-5.6-luna';
 
 export class LlmError extends Error {}
 
+/** True when the app can reach an AI backend (our proxy, or a development key). */
 export function hasLlmKey(): boolean {
-  return Boolean(process.env.EXPO_PUBLIC_OPENROUTER_API_KEY);
+  return hasAiBackend();
 }
 
 /** Sends one prompt to the LLM through OpenRouter and returns the reply text. Throws `LlmError` on any failure. */
 export async function callLlm(options: { prompt: string; json?: boolean; maxTokens: number }): Promise<string> {
-  const apiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
-  if (!apiKey) throw new LlmError('No OpenRouter key configured');
+  const endpoint = aiEndpoint('chat');
+  if (!endpoint) throw new LlmError('No AI backend configured');
 
   let response: Response;
   try {
-    response = await fetch(CHAT_URL, {
+    response = await fetch(endpoint.url, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: endpoint.headers,
       body: JSON.stringify({
         model: LLM_MODEL,
         messages: [{ role: 'user', content: options.prompt }],
