@@ -209,12 +209,22 @@ fi
 # ── 2. Deploy ─────────────────────────────────────────────────────────────
 stage "Put the helper online"
 say "This uploads the helper code and gives it a web address."
-note "If it asks you to pick a 'workers.dev' name, choose anything you like (for example your name)."
 pause "Press Enter to deploy:"
-DEPLOY_LOG=$(mktemp)
-npx wrangler deploy 2>&1 | tee "$DEPLOY_LOG"
-PROXY_URL=$(grep -Eo 'https://[A-Za-z0-9.-]+\.workers\.dev' "$DEPLOY_LOG" | head -1 || true)
-rm -f "$DEPLOY_LOG"
+if ! DEPLOY_OUT=$(npx wrangler deploy 2>&1); then
+  if grep -qi "workers.dev subdomain" <<<"$DEPLOY_OUT"; then
+    warn "Cloudflare needs you to pick a free 'workers.dev' name once (this is normal)."
+    open_url "https://dash.cloudflare.com/?to=/:account/workers/onboarding"
+    step "On the page that opens, choose a name for your account (letters and numbers, e.g. your name)."
+    step "Click the button to save it. You don't need to create a Worker there."
+    pause "Press Enter once you've saved the name:"
+    say "Trying again..."
+    DEPLOY_OUT=$(npx wrangler deploy 2>&1) || { printf '%s\n' "$DEPLOY_OUT"; warn "Deploy failed. Copy the lines above to Claude."; exit 1; }
+  else
+    printf '%s\n' "$DEPLOY_OUT"; warn "Deploy failed. Copy the lines above to Claude."; exit 1
+  fi
+fi
+printf '%s\n' "$DEPLOY_OUT" | tail -8
+PROXY_URL=$(grep -Eo 'https://[A-Za-z0-9.-]+\.workers\.dev' <<<"$DEPLOY_OUT" | head -1 || true)
 if [[ -z "$PROXY_URL" ]]; then
   warn "Couldn't read the address from the output."
   ask PROXY_URL "Paste the https://....workers.dev address shown above:"
