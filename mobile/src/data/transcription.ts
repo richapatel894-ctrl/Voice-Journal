@@ -1,12 +1,13 @@
 import { File } from 'expo-file-system';
 
-const TRANSCRIPTION_URL = 'https://openrouter.ai/api/v1/audio/transcriptions';
+import { aiEndpoint, hasAiBackend } from '@/data/backend';
+
 /** Whisper through OpenRouter: one key for transcription, tagging and summaries (PRD §11). */
 const TRANSCRIPTION_MODEL = 'openai/whisper-1';
 
-/** Read at build time from the git-ignored `mobile/.env.local`; there is no in-app key screen. */
+/** True when the app can reach an AI backend (our proxy, or a development key); there is no in-app key screen. */
 export function hasTranscriptionKey(): boolean {
-  return Boolean(process.env.EXPO_PUBLIC_OPENROUTER_API_KEY);
+  return hasAiBackend();
 }
 
 function toBase64(buffer: ArrayBuffer): string {
@@ -44,15 +45,15 @@ export class TranscriptionError extends Error {}
  * which is far above what Whisper needs for typical journal entries.
  */
 export async function transcribeAudio(fileUri: string): Promise<string> {
-  const apiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
-  if (!apiKey) throw new TranscriptionError('No OpenRouter key configured');
+  const endpoint = aiEndpoint('transcribe');
+  if (!endpoint) throw new TranscriptionError('No AI backend configured');
 
   const audio = toBase64(await new File(fileUri).arrayBuffer());
   let response: Response;
   try {
-    response = await fetch(TRANSCRIPTION_URL, {
+    response = await fetch(endpoint.url, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: endpoint.headers,
       // verbose_json adds per-phrase confidence so we can drop text Whisper invented from silence or noise.
       body: JSON.stringify({
         model: TRANSCRIPTION_MODEL,

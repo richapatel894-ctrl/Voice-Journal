@@ -1,0 +1,7 @@
+name = "voice-journal-proxy"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+# Secrets (set with `npx wrangler secret put <NAME>`, never written here):
+#   OPENROUTER_API_KEY  the OpenRouter key
+#   APP_TOKEN           shared password the app sends in the X-App-Token header

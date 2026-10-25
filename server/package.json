@@ -1,0 +1,15 @@
+{
+  "name": "voice-journal-proxy",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Cloudflare Worker that holds the OpenRouter key so it never ships inside the app",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

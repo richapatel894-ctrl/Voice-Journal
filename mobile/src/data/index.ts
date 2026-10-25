@@ -17,6 +17,7 @@ export * from '@/data/save-events';
 export * from '@/data/processing';
 export * from '@/data/transcription';
 export * from '@/data/tagging';
+export * from '@/data/backend';
 export * from '@/data/llm';
 export * from '@/data/welcome';
 export * from '@/data/weather';
